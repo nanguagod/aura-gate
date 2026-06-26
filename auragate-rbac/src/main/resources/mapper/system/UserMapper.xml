@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.auragate.rbac.mapper.UserMapper">
+
+    <!--
+        resultMap: 结果映射配置
+        作用: 将数据库查询结果映射到Java对象
+        type="User" 映射到User对象
+        id="UserResult": 这个映射的唯一标识, 其他地方可以使用
+    -->
+    <resultMap id="UserResult" type="User">
+        <!--
+           id: 主键字段映射
+           property="userId": Java对象中的属性名
+           column="user_id": 数据库表中的列名
+           作用: 告诉Mybatis, 数据库的user_id列对应Java对象中的userId属性
+        -->
+        <id property="userId" column="user_id"/>
+        <!-- result : 普通字段映射每个<result>标签中的字段 -->
+        <result property="userName" column="user_name"/>
+        <result property="sex" column="sex"/>
+        <result property="avatar" column="avatar"/>
+        <result property="password" column="password"/>
+        <result property="createTime" column="create_time"/>
+        <result property="roleId" column="role_id"/>
+        <result property="roleName" column="role_name"/>
+    </resultMap>
+
+    <!--
+        select: 定义查询语句
+        id="selectUserByUserName": 对应Mapper接口中的方法名
+        resultMap="UserResult": 使用上面定义的resultMap进行结果映射
+        parameterType="String": 参数类型 ( 可以省略, Myabtis会自动判断 )
+    -->
+    <!-- 根据用户名查询用户 -->
+    <select id="selectUserByUserName" resultMap="UserResult" parameterType="String">
+        select user_id, user_name, sex, avatar, password, create_time
+        from user
+        where user_name = #{userName}
+    </select>
+
+    <!-- 通过用户ID查询用户信息 -->
+    <select id="selectUserByUserId" resultMap="UserResult" parameterType="Long">
+        select u.user_id, u.user_name, u.sex, u.avatar, u.password, u.create_time,
+               ur.role_id,
+               r.role_name
+        from user u
+        left join user_role ur on u.user_id = ur.user_id
+        left join role r on ur.role_id = r.role_id
+        where u.user_id = #{userId}
+    </select>
+
+    <!--查询用户列表-->
+    <select id="selectUserList" resultMap="UserResult" parameterType="User">
+        select u.user_id, u.user_name, u.sex, u.avatar, u.password, u.create_time,
+               ur.role_id,
+               r.role_name
+        from user u
+        left join user_role ur on u.user_id = ur.user_id
+        left join role r on ur.role_id = r.role_id
+        <where>
+            <if test="userId != null">
+                and u.user_id = #{userId}
+            </if>
+            <if test="userName != null and userName != ''">
+                and u.user_name like concat('%', #{userName} ,'%')
+            </if>
+        </where>
+    </select>
+
+    <!--新增用户-->
+    <!--
+        第一个trim标签: 处理字段列表
+        作用: 动态生成(字段1, 字段2, 字段3) 这部分
+        例子:
+        生成的字段: user_id, user_name, password,
+        经过trim处理: user_id, user_name, password) -去掉最后的括号, 加上右括号
+        最终效果: (user_id, user_name, password)
+    -->
+    <!--
+        第二个trim标签: 处理值列表
+        作用: 动态生成(值1, 值2, 值3) 这部分
+
+        注意: 这个trim标签的prefix是"values (", 有一个空格!
+        最后生成的sql: insert int user(字段) values(值)
+    -->
+    <!--
+    useGeneratedKeys="true": 告诉mybatis使用JDBC的getGeneratedKeys方法来获取数据库自动生成的主键
+    keyProperty="userId": 指定将获取到的主键值设置到User对象的userId的属性上
+    -->
+    <insert id="insertUser" parameterType="User" useGeneratedKeys="true" keyProperty="userId">
+        insert into user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="userName != null and userName != ''">user_name,</if>
+            <if test="avatar != null and avatar != ''">avatar,</if>
+            <if test="sex != null">sex,</if>
+            <if test="password != null and password != ''">password,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="userName != null and userName != ''">#{userName},</if>
+            <if test="avatar != null and avatar != ''">#{avatar},</if>
+            <if test="sex != null">#{sex},</if>
+            <if test="password != null and password != ''">#{password},</if>
+        </trim>
+    </insert>
+
+    <!--更新用户头像-->
+    <update id="updateUserAvatar" parameterType="User">
+        update user
+        set avatar = #{avatar}
+        where user_id = #{userId}
+    </update>
+
+    <!--修改用户信息-->
+    <update id="updateUser" parameterType="User">
+        update user
+        <set>
+            <if test="userName != null and userName != ''">user_name = #{userName},</if>
+            <if test="sex != null">sex = #{sex},</if>
+            <if test="password != null and password != ''">password = #{password},</if>
+        </set>
+        where user_id = #{userId}
+    </update>
+
+    <!-- 重置密码 -->
+    <update id="resetUserPwd" parameterType="User">
+        update user
+        set password = #{newPassword}
+        where user_id = #{userId}
+    </update>
+
+    <!--删除用户-->
+    <delete id="deleteUserByUserIds" parameterType="Long">
+        delete from user
+        where user_id in
+        <foreach collection="array" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </delete>
+
+</mapper>
