@@ -1,8 +1,11 @@
 package com.auragate.ai.websocket;
 
+import com.auragate.ai.agent.AuraAgent;
 import com.auragate.ai.service.AiConversationService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -13,7 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI WebSocket 处理器 — 接收用户消息，流式返回 AI 回复
- * 端点：/ws/ai（需在 WebSocketConfig 中注册）
+ * 端点：/ws/ai（在 WebSocketAiConfig 中注册）
+ *
+ * 使用 AuraAgent 处理对话，通过 WebSocket 逐步骤推送结果，
+ * 以 [DONE] 标记结束。
  */
 @Slf4j
 @Component
@@ -21,6 +27,12 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
 
     @Resource
     private AiConversationService conversationService;
+
+    @Resource
+    private ToolCallback[] allTools;
+
+    @Resource
+    private ChatModel dashscopeChatModel;
 
     /** 在线会话列表 */
     private static final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -32,34 +44,50 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         String userId = getUserId(session);
         String payload = message.getPayload();
+        Long uid = parseUserId(userId);
 
         // 1. 保存用户消息
-        conversationService.saveUserMessage(parseUserId(userId), payload);
+        conversationService.saveUserMessage(uid, payload);
 
-        // 2. 获取上下文
-        var context = conversationService.getContext(parseUserId(userId), 10);
+        // 2. 创建 AuraAgent 并流式运行
+        AuraAgent agent = new AuraAgent(allTools, dashscopeChatModel);
 
-        // 3. 发送流式回复（简化版 — 后续可对接 AuraAgent）
-        StringBuilder sb = new StringBuilder();
-        for (String ctx : context) {
-            sb.append(ctx).append("\n");
-        }
-        String reply = "收到消息: " + payload + "\n上下文:\n" + sb;
-
-        // 模拟逐 token 推送
-        for (char c : reply.toCharArray()) {
-            if (session.isOpen()) {
-                session.sendMessage(new TextMessage(String.valueOf(c)));
-                Thread.sleep(10); // 模拟延迟
-            }
-        }
-        // 发送结束标记
-        if (session.isOpen()) {
-            session.sendMessage(new TextMessage("[DONE]"));
-        }
+        agent.runStream(payload,
+                // dataEmitter — 每步结果推送到 WebSocket
+                data -> {
+                    if (session.isOpen()) {
+                        try {
+                            session.sendMessage(new TextMessage(data));
+                        } catch (Exception e) {
+                            log.error("WebSocket 发送失败", e);
+                        }
+                    }
+                },
+                // onComplete
+                () -> {
+                    if (session.isOpen()) {
+                        try {
+                            session.sendMessage(new TextMessage("[DONE]"));
+                        } catch (Exception e) {
+                            log.error("WebSocket 发送 [DONE] 失败", e);
+                        }
+                    }
+                },
+                // onError
+                e -> {
+                    if (session.isOpen()) {
+                        try {
+                            session.sendMessage(new TextMessage("执行错误：" + e.getMessage()));
+                            session.sendMessage(new TextMessage("[DONE]"));
+                        } catch (Exception ex) {
+                            log.error("WebSocket 发送错误信息失败", ex);
+                        }
+                    }
+                }
+        );
     }
 
     @Override

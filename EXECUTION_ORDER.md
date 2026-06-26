@@ -75,18 +75,18 @@
 
 ---
 
-## ■ Phase 4：AI 模块增强（进行中）
+## ✅ Phase 4：AI 模块增强（已完成）
 
 - [x] 新建 `AiConversationService.java`：Redis 存对话上下文（`auragate:ai:context:{userId}`）
-- [x] 新建 `AiWebSocketHandler.java`：WebSocket 端点 `/ws/ai`，模拟流式输出
+- [x] 新建 `AiWebSocketHandler.java`：WebSocket 端点 `/ws/ai`，对接 AuraAgent 流式对话
 - [x] 新建 `WebSocketAiConfig.java`：注册 WebSocket handler
 - [x] 新建 `HybridSearchService.java`：PGVector 向量检索 + ES 全文检索 → 融合排序
 - [x] 新建 `KnowledgeService.java`：文档上传/分割/embedding → PGVector + ES 双索引
 - [x] 新建 `KnowledgeController.java`：文档上传、RAG 问答、文档列表 API
 - [x] 新建 `AiTaskProducer.java`、`AiTaskConsumer.java`：RabbitMQ 异步 AI 任务
 - [x] 启用 `VectorStoreConfig.java` 的 `@Configuration` 注解
-- [ ] 删除原 SSE 代码，改为 WebSocket（AiController 仍用 SSE，等待改造）
-- [ ] 编译验证 Phase 4（尚未编译）
+- [x] AiController SSE 改造为 WebSocket，标记 `@Deprecated`
+- [x] 编译验证 Phase 4（全部通过）
 
 ---
 

@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * 抽象基础代理类，用于管理代理状态和执行流程。
@@ -92,38 +93,33 @@ public abstract class BaseAgent {
     }
 
     /**
-     * 运行代理（流式输出）
+     * 运行代理（流式输出，通过回调推送数据）
+     * <p>推荐方式：可用于 WebSocket 等非 HTTP 流式场景</p>
      *
-     * @param userPrompt 用户提示词
-     * @return 执行结果
+     * @param userPrompt  用户提示词
+     * @param dataEmitter 每步结果回调（可多次调用）
+     * @param onComplete  完成回调
+     * @param onError     错误回调
      */
-    public SseEmitter runStream(String userPrompt) {
-        // 创建一个超时时间较长的 SseEmitter
-        SseEmitter sseEmitter = new SseEmitter(300000L); // 5 分钟超时
-        // 使用线程异步处理，避免阻塞主线程
+    public void runStream(String userPrompt, Consumer<String> dataEmitter,
+                          Runnable onComplete, Consumer<Exception> onError) {
         CompletableFuture.runAsync(() -> {
-            // 1、基础校验
             try {
+                // 1、基础校验
                 if (this.state != AgentState.IDLE) {
-                    sseEmitter.send("错误：无法从状态运行代理：" + this.state);
-                    sseEmitter.complete();
+                    dataEmitter.accept("错误：无法从状态运行代理：" + this.state);
+                    onComplete.run();
                     return;
                 }
                 if (StrUtil.isBlank(userPrompt)) {
-                    sseEmitter.send("错误：不能使用空提示词运行代理");
-                    sseEmitter.complete();
+                    dataEmitter.accept("错误：不能使用空提示词运行代理");
+                    onComplete.run();
                     return;
                 }
-            } catch (Exception e) {
-                sseEmitter.completeWithError(e);
-            }
-            // 2、执行，更改状态
-            this.state = AgentState.RUNNING;
-            // 记录消息上下文
-            messageList.add(new UserMessage(userPrompt));
-            // 保存结果列表
-            List<String> results = new ArrayList<>();
-            try {
+                // 2、执行，更改状态
+                this.state = AgentState.RUNNING;
+                // 记录消息上下文
+                messageList.add(new UserMessage(userPrompt));
                 // 执行循环
                 for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
                     int stepNumber = i + 1;
@@ -132,40 +128,55 @@ public abstract class BaseAgent {
                     // 单步执行
                     String stepResult = step();
                     String result = "Step " + stepNumber + ": " + stepResult;
-                    results.add(result);
-                    // 输出当前每一步的结果到 SSE
-                    sseEmitter.send(result);
+                    dataEmitter.accept(result);
                 }
                 // 检查是否超出步骤限制
                 if (currentStep >= maxSteps) {
                     state = AgentState.FINISHED;
-                    results.add("Terminated: Reached max steps (" + maxSteps + ")");
-                    sseEmitter.send("执行结束：达到最大步骤（" + maxSteps + "）");
+                    dataEmitter.accept("执行结束：达到最大步骤（" + maxSteps + "）");
                 }
-                // 正常完成
-                sseEmitter.complete();
+                onComplete.run();
             } catch (Exception e) {
                 state = AgentState.ERROR;
                 log.error("error executing agent", e);
-                try {
-                    sseEmitter.send("执行错误：" + e.getMessage());
-                    sseEmitter.complete();
-                } catch (IOException ex) {
-                    sseEmitter.completeWithError(ex);
-                }
+                onError.accept(e);
             } finally {
                 // 3、清理资源
                 this.cleanup();
             }
         });
+    }
 
-        // 设置超时回调
+    /**
+     * 运行代理（流式输出，SseEmitter）
+     * <p>内部委托给 {@link #runStream(String, Consumer, Runnable, Consumer)}</p>
+     *
+     * @param userPrompt 用户提示词
+     * @return SseEmitter
+     * @deprecated 推荐使用 WebSocket + 回调式 {@link #runStream(String, Consumer, Runnable, Consumer)}
+     */
+    @Deprecated
+    public SseEmitter runStream(String userPrompt) {
+        SseEmitter sseEmitter = new SseEmitter(300000L); // 5 分钟超时
+
+        runStream(userPrompt,
+                data -> {
+                    try { sseEmitter.send(data); } catch (IOException e) { throw new RuntimeException(e); }
+                },
+                () -> {
+                    try { sseEmitter.complete(); } catch (Exception ignored) {}
+                },
+                e -> {
+                    try { sseEmitter.send("执行错误：" + e.getMessage()); sseEmitter.complete(); }
+                    catch (IOException ex) { sseEmitter.completeWithError(ex); }
+                }
+        );
+
         sseEmitter.onTimeout(() -> {
             this.state = AgentState.ERROR;
             this.cleanup();
             log.warn("SSE connection timeout");
         });
-        // 设置完成回调
         sseEmitter.onCompletion(() -> {
             if (this.state == AgentState.RUNNING) {
                 this.state = AgentState.FINISHED;
