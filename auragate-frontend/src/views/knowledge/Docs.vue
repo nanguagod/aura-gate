@@ -29,14 +29,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { listDocs } from '@/api/knowledge'
 
 const uploadUrl = '/api/ai/knowledge/upload'
-const uploadHeaders = {
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-}
+const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}` }
 const documents = ref([])
+
+onMounted(async () => {
+  const res = await listDocs()
+  if (res.code === 200) documents.value = res.data || []
+})
 
 function onUploadSuccess(res) {
   ElMessage.success('文档上传成功')

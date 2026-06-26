@@ -25,6 +25,12 @@ const routes = [
         meta: { title: '仪表盘', icon: 'DataBoard' },
       },
       {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/system/User.vue'),
+        meta: { title: '个人信息', icon: 'User' },
+      },
+      {
         path: 'system/user',
         name: 'User',
         component: () => import('@/views/system/User.vue'),
@@ -61,6 +67,12 @@ const routes = [
         meta: { title: '知识问答', icon: 'ChatDotRound' },
       },
     ],
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/404.vue'),
+    meta: { title: '404', noAuth: true },
   },
 ]
 

@@ -31,12 +31,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { listUser } from '@/api/system/user'
 
 const users = ref([])
 
 onMounted(async () => {
-  const res = await request.get('/system/user/list')
+  const res = await listUser()
   if (res.code === 200) users.value = res.rows || []
 })
 </script>

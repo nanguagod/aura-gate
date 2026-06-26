@@ -57,18 +57,23 @@ export function sendMessage(destination, body) {
 
 /**
  * Connect to raw AI WebSocket (/ws/ai)
- * @param {string} userId
- * @param {Function} onToken callback for each token char
+ * 使用相对 URL（通过 Vite proxy），无需 hardcode localhost
+ * @param {Function} onToken 每个 token 片段的回调
+ * @param {Function} onDone 完成回调（可选）
+ * @param {Function} onError 错误回调（可选）
  * @returns {WebSocket}
  */
-export function connectAiWebSocket(userId, onToken) {
-  let token = localStorage.getItem('token')
-  const ws = new WebSocket(`ws://localhost:8080/ws/ai?id=${userId}&token=${token}`)
+export function connectAiWebSocket(onToken, onDone, onError) {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const token = localStorage.getItem('token')
+  const wsUrl = `${protocol}//${window.location.host}/ws/ai?token=${token || ''}`
+
+  const ws = new WebSocket(wsUrl)
 
   ws.onmessage = (event) => {
     const data = event.data
     if (data === '[DONE]') {
-      if (onToken) onToken('\n\n--- 对话结束 ---')
+      if (onDone) onDone()
       return
     }
     if (onToken) onToken(data)
@@ -76,10 +81,13 @@ export function connectAiWebSocket(userId, onToken) {
 
   ws.onerror = (err) => {
     console.error('AI WebSocket 错误:', err)
+    if (onError) onError(err)
   }
 
-  ws.onclose = () => {
-    console.log('AI WebSocket 已关闭')
+  ws.onclose = (event) => {
+    if (event.code !== 1000 && onError) {
+      onError(new Error(`WebSocket 异常关闭: code=${event.code}`))
+    }
   }
 
   return ws

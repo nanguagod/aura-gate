@@ -30,12 +30,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { listRole } from '@/api/system/role'
 
 const roles = ref([])
 
 onMounted(async () => {
-  const res = await request.get('/system/role/list')
+  const res = await listRole()
   if (res.code === 200) roles.value = res.rows || []
 })
 </script>

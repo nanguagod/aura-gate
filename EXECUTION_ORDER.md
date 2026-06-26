@@ -90,18 +90,21 @@
 
 ---
 
-## □ Phase 5：前端
+## ✅ Phase 5：前端（已完成）
 
-- [ ] 初始化 Vue 3.5 + Vite 7 + Element Plus 项目
-- [ ] 配置路由：login / register / dashboard / system/* / ai/agent / knowledge/*
-- [ ] 配置 Pinia Store：userStore、routeStore
-- [ ] 配置 permission.js：路由权限守卫
-- [ ] 搭布局组件（Sidebar、AppMain、Layout）
-- [ ] 迁移登录/注册页 + 系统管理页面（user、role、menu）
-- [ ] 新建 `dashboard.vue`（仪表盘）
-- [ ] 新建 `ai/agent.vue`（AuraAgent 对话页面 + WebSocket 集成）
-- [ ] 新建 `knowledge/docs.vue`、`knowledge/qa.vue`
-- [ ] 新建 `websocket.js` 工具文件
+- [x] 初始化 Vue 3.5 + Vite 7 + Element Plus 项目（package.json 依赖齐全）
+- [x] 配置路由：login / register / dashboard / system/* / ai/agent / knowledge/*（含 404 和 profile）
+- [x] 配置 Pinia Store：userStore、routeStore
+- [x] 配置 permission.js：路由权限守卫
+- [x] 搭布局组件（Sidebar、AppMain、Layout）
+- [x] 迁移登录/注册页 + 系统管理页面（user、role、menu）
+- [x] 新建 `dashboard.vue`（仪表盘）
+- [x] 新建 `ai/agent.vue`（AuraAgent 对话页面 + **WebSocket 集成**，取代 SSE）
+- [x] 新建 `knowledge/docs.vue`、`knowledge/qa.vue`
+- [x] 新建 `websocket.js` 工具文件（含 AI WebSocket + STOMP）
+- [x] 创建 API 层：`api/login.js`、`api/system/*`、`api/knowledge.js`
+- [x] 创建 `.env.development`、`.env.production`、`404.vue`
+- [x] `npm install` + `vite build` 编译通过（构建成功）
 
 ---
 

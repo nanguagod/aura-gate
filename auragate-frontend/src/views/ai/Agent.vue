@@ -10,7 +10,7 @@
               {{ msg.content }}
             </el-tag>
           </div>
-          <div v-else style="width: 100%; display: flex; justify-content: flex-start;">
+          <div v-else style="width: 100%; display: flex;">
             <div style="max-width: 70%; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px solid #e6e6e6; white-space: pre-wrap; font-size: 14px;">
               <strong>AuraAgent: </strong>{{ msg.content }}
             </div>
@@ -24,7 +24,14 @@
       </div>
       <!-- Input area -->
       <div style="display: flex; gap: 12px;">
-        <el-input v-model="input" placeholder="输入你的问题..." size="large" @keyup.enter="sendMessage" :disabled="streaming" clearable />
+        <el-input
+          v-model="input"
+          placeholder="输入你的问题..."
+          size="large"
+          @keyup.enter="sendMessage"
+          :disabled="streaming"
+          clearable
+        />
         <el-button type="primary" size="large" @click="sendMessage" :disabled="streaming || !input.trim()">
           <el-icon><Promotion /></el-icon> 发送
         </el-button>
@@ -38,8 +45,7 @@
 
 <script setup>
 import { ref, nextTick, onUnmounted } from 'vue'
-import request from '@/utils/request'
-import { ElMessage } from 'element-plus'
+import { connectAiWebSocket } from '@/utils/websocket'
 
 const input = ref('')
 const messages = ref([
@@ -47,9 +53,9 @@ const messages = ref([
 ])
 const streaming = ref(false)
 const msgContainer = ref(null)
-let eventSource = null
+let ws = null
 
-async function sendMessage() {
+function sendMessage() {
   const text = input.value.trim()
   if (!text || streaming.value) return
 
@@ -62,35 +68,36 @@ async function sendMessage() {
   messages.value.push({ role: 'assistant', content: '' })
   const lastIdx = messages.value.length - 1
 
-  try {
-    const res = await request.get('/ai/agent/chat', {
-      params: { message: text },
-      responseType: 'text',
-      timeout: 120000,
-      onDownloadProgress: (progressEvent) => {
-        const data = progressEvent.event?.target?.responseText || ''
-        const lines = data.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const content = line.substring(5)
-            if (content === '[DONE]') continue
-            messages.value[lastIdx].content += content
-          }
-        }
-        scrollToBottom()
-      },
-    })
-  } catch (e) {
-    messages.value[lastIdx].content = '请求失败，请稍后重试。'
-    ElMessage.error('AI 请求失败')
-  } finally {
-    streaming.value = false
-    scrollToBottom()
-  }
+  // Close previous connection if any
+  if (ws) ws.close()
+
+  ws = connectAiWebSocket(
+    // onToken — 每个数据片段
+    (token) => {
+      messages.value[lastIdx].content += token
+      scrollToBottom()
+    },
+    // onDone
+    () => {
+      streaming.value = false
+      scrollToBottom()
+    },
+    // onError
+    () => {
+      messages.value[lastIdx].content = '连接失败，请稍后重试。\n\n提示：请确保后端已启动，且 WebSocket 端点 /ws/ai 可用。'
+      streaming.value = false
+      scrollToBottom()
+    },
+  )
+
+  // Send the message after connection opens
+  ws.onopen = () => ws.send(text)
 }
 
 function clearChat() {
+  if (ws) ws.close()
   messages.value = [{ role: 'assistant', content: '你好！我是 AuraAgent，有什么可以帮你的吗？' }]
+  streaming.value = false
 }
 
 function scrollToBottom() {
@@ -102,7 +109,7 @@ function scrollToBottom() {
 }
 
 onUnmounted(() => {
-  if (eventSource) eventSource.close()
+  if (ws) ws.close()
 })
 </script>
 

@@ -34,12 +34,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { listMenu } from '@/api/system/menu'
 
 const menus = ref([])
 
 onMounted(async () => {
-  const res = await request.get('/system/menu/list')
+  const res = await listMenu()
   if (res.code === 200) menus.value = res.data || []
 })
 </script>

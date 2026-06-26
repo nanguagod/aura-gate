@@ -16,8 +16,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
+import { qa } from '@/api/knowledge'
 
 const query = ref('')
 const answer = ref('')
@@ -28,9 +28,7 @@ async function search() {
   loading.value = true
   answer.value = ''
   try {
-    const res = await request.get('/ai/knowledge/qa', {
-      params: { query: query.value, topK: 5 },
-    })
+    const res = await qa(query.value)
     answer.value = res.answer || '未找到相关内容'
   } catch {
     ElMessage.error('查询失败')

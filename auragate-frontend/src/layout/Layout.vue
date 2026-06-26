@@ -31,7 +31,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/stores/userStore'
 import Sidebar from './Sidebar.vue'
 
 const router = useRouter()
