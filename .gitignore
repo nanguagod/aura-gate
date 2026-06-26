@@ -1,0 +1,40 @@
+# === Maven ===
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# === IDE ===
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# === Logs ===
+*.log
+logs/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Node ===
+node_modules/
+dist/
+
+# === Maven wrapper (generated files, not needed with pom) ===
+.mvn/
+mvnw
+mvnw.cmd
+
+# === Legacy source dirs (already integrated into modules) ===
+/yu-ai-agent-master/
+/multi-roles-project/
+
+# === Environment-specific config ===
+*.local.*
+application-local.yml
+application-dev.yml
