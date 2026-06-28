@@ -6,3 +6,6 @@ spring:
     active: rbac, ai
   application:
     name: AuraGate
+  autoconfigure:
+    exclude:
+      - com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure

@@ -128,7 +128,6 @@ public class ProfileController extends BaseController {
 
         //设置要更新的用户信息
         currentUser.setUserName(user.getUserName());
-        currentUser.setSex(user.getSex());
 
         //调用服务层更新用户信息
         return toAjax(userService.updateUser(currentUser));

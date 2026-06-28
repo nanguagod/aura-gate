@@ -20,9 +20,6 @@ public class User {
     //用户名
     private String userName;
 
-    //用户性别
-    private Integer sex;
-
     //用户头像
     private String avatar;
 

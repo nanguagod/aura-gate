@@ -9,12 +9,12 @@ spring:
       base-url: http://localhost:11434
       chat:
         model: gemma3:1b
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/auragate_ai
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+    pgvector:
+      url: jdbc:postgresql://localhost:5432/auragate_ai
+      username: postgres
+      password: postgres
+      driver-class-name: org.postgresql.Driver
 
 # AI 模块配置
 search-api:

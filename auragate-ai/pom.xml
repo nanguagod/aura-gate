@@ -117,6 +117,13 @@
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
             <version>4.4.0</version>
         </dependency>
+
+        <!-- jsonschema-generator (Spring AI 1.0.0 需要高版本) -->
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>4.37.0</version>
+        </dependency>
     </dependencies>
 
     <build>

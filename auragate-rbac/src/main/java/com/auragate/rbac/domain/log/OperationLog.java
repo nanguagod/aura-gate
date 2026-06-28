@@ -26,7 +26,7 @@ public class OperationLog {
     private String operationType;
 
     /** 操作描述 */
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(type = FieldType.Text, analyzer = "standard")
     private String description;
 
     /** 请求URL */

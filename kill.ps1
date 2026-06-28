@@ -1,0 +1,1 @@
+powershell -Command "Stop-Process -Id 39540 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; Write-Host 'done'"

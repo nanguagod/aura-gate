@@ -14,8 +14,8 @@ public class Role {
     private Long roleId;
     //角色名称
     private String roleName;
-    //显示顺序
-    private Integer roleSort;
+    //权限标识
+    private String roleKey;
     //创建时间
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;

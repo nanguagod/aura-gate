@@ -3,7 +3,7 @@ spring:
     druid:
       url: jdbc:mysql://localhost:3306/auragate?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
       username: root
-      password: root
+      password: 123456
       initial-size: 5
       min-idle: 5
       max-active: 20
@@ -12,6 +12,7 @@ spring:
       test-on-return: false
       pool-prepared-statements: true
       max-pool-prepared-statement-per-connection-size: 20
+      driver-class-name: com.mysql.cj.jdbc.Driver
       filters: stat,wall
 
   servlet:
@@ -26,8 +27,9 @@ mybatis:
 
 # JWT配置
 token:
+  header: Authorization
   secret: auragate_secret_key_2026_very_long_encryption_key_here
-  expire-time: 300
+  expireTime: 300
 
 # 日志
 logging:
