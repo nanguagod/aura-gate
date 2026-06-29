@@ -1,14 +1,17 @@
 spring:
   ai:
     dashscope:
-      api-key: your-api-key-here
+      api-key: ${DASHSCOPE_API_KEY:}
+      embedding:
+        enabled: true
+    openai:
+      api-key: ${aura-gate-apikey:}
+      base-url: https://api.deepseek.com
       chat:
         options:
-          model: qwen-plus
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        model: gemma3:1b
+          model: deepseek-chat
+      embedding:
+        enabled: false
   datasource:
     pgvector:
       url: jdbc:postgresql://localhost:5432/auragate_ai

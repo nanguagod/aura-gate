@@ -34,9 +34,9 @@
         <el-card>
           <template #header><span>快速入口</span></template>
           <el-space direction="vertical" fill style="width: 100%;">
-            <el-button type="primary" @click="$router.push('/ai/agent')" icon="MagicStick">AI 智能体对话</el-button>
-            <el-button type="success" @click="$router.push('/knowledge/qa')" icon="ChatDotRound">知识库问答</el-button>
-            <el-button @click="$router.push('/knowledge/docs')" icon="FolderOpened">文档管理</el-button>
+            <el-button type="primary" @click="navigateTo('/ai/agent')" icon="MagicStick">AI 智能体对话</el-button>
+            <el-button type="success" @click="navigateTo('/knowledge/qa')" icon="ChatDotRound">知识库问答</el-button>
+            <el-button @click="navigateTo('/knowledge/docs')" icon="FolderOpened">文档管理</el-button>
           </el-space>
         </el-card>
       </el-col>
@@ -45,6 +45,24 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+
+const router = useRouter()
+
+function navigateTo(path) {
+  console.log('[Dashboard] navigateTo:', path, 'router:', !!router)
+  try {
+    router.push(path).catch(err => {
+      console.error('[Dashboard] router.push rejected:', err)
+      ElMessage.error('导航失败: ' + (err?.message || '未知错误'))
+    })
+  } catch (e) {
+    console.error('[Dashboard] router.push threw:', e)
+    ElMessage.error('导航失败: ' + (e?.message || String(e)))
+  }
+}
+
 const cards = [
   { title: '用户数', value: 1, icon: 'User', color: '#409eff' },
   { title: '菜单数', value: 4, icon: 'Menu', color: '#67c23a' },

@@ -3,6 +3,7 @@ package com.auragate.ai.agent;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuraAgent extends ToolCallAgent {
 
-    public AuraAgent(ToolCallback[] allTools, ChatModel dashscopeChatModel) {
+    public AuraAgent(ToolCallback[] allTools, @Qualifier("openAiChatModel") ChatModel dashscopeChatModel) {
         super(allTools);
         this.setName("auraAgent");
         String SYSTEM_PROMPT = """

@@ -9,6 +9,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  define: {
+    // sockjs-client 使用了 Node.js 的 global，Vite 浏览器环境需要 polyfill
+    global: 'globalThis',
+  },
   server: {
     port: 5173,
     proxy: {

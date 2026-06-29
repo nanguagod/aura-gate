@@ -174,13 +174,19 @@ public class TokenService {
     }
 
     /**
-     * 从HTTP请求中提取token
+     * 从HTTP请求中提取token（支持 Header 和 URL query param）
      */
     public String getToken(HttpServletRequest request) {
+        // 1. 先从 Authorization Header 读取
         String token = request.getHeader(header);
         if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
             return token.substring(7);
         }
+        if (StringUtils.hasText(token)) {
+            return token;
+        }
+        // 2. WebSocket 请求通过 URL query param 传递 token
+        token = request.getParameter("token");
         return token;
     }
 

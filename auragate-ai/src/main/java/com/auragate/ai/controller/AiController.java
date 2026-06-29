@@ -23,7 +23,7 @@ public class AiController {
     private ToolCallback[] allTools;
 
     @Resource
-    private ChatModel dashscopeChatModel;
+    private ChatModel openAiChatModel;
 
     /**
      * 流式调用 AuraAgent 超级智能体
@@ -36,7 +36,7 @@ public class AiController {
     @Deprecated
     @GetMapping("/agent/chat")
     public SseEmitter doChatWithAgent(String message) {
-        AuraAgent auraAgent = new AuraAgent(allTools, dashscopeChatModel);
+        AuraAgent auraAgent = new AuraAgent(allTools, openAiChatModel);
         return auraAgent.runStream(message);
     }
 }

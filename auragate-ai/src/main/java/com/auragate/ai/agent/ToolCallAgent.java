@@ -2,7 +2,7 @@ package com.auragate.ai.agent;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import com.auragate.ai.agent.model.AgentState;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -41,13 +41,19 @@ public class ToolCallAgent extends ReActAgent {
     // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
     private final ChatOptions chatOptions;
 
+    // 是否已经添加过下一步提示词（防止每步重复添加）
+    private boolean nextStepPromptAdded = false;
+
+    // AI 不需要工具调用时的纯文本回复（作为最终答案）
+    private String finalAnswerText = null;
+
     public ToolCallAgent(ToolCallback[] availableTools) {
         super();
         this.availableTools = availableTools;
         this.toolCallingManager = ToolCallingManager.builder().build();
         // 禁用 Spring AI 内置的工具调用机制，自己维护选项和消息上下文
-        this.chatOptions = DashScopeChatOptions.builder()
-                .withInternalToolExecutionEnabled(false)
+        this.chatOptions = ToolCallingChatOptions.builder()
+                .internalToolExecutionEnabled(false)
                 .build();
     }
 
@@ -58,10 +64,11 @@ public class ToolCallAgent extends ReActAgent {
      */
     @Override
     public boolean think() {
-        // 1、校验提示词，拼接用户提示词
-        if (StrUtil.isNotBlank(getNextStepPrompt())) {
+        // 1、校验提示词，拼接用户提示词（每个 agent 生命周期只添加一次）
+        if (StrUtil.isNotBlank(getNextStepPrompt()) && !nextStepPromptAdded) {
             UserMessage userMessage = new UserMessage(getNextStepPrompt());
             getMessageList().add(userMessage);
+            nextStepPromptAdded = true;
         }
         // 2、调用 AI 大模型，获取工具调用结果
         List<Message> messageList = getMessageList();
@@ -69,7 +76,7 @@ public class ToolCallAgent extends ReActAgent {
         try {
             ChatResponse chatResponse = getChatClient().prompt(prompt)
                     .system(getSystemPrompt())
-                    .tools(availableTools)
+                    .toolCallbacks(availableTools)
                     .call()
                     .chatResponse();
             // 记录响应，用于等下 Act
@@ -87,10 +94,11 @@ public class ToolCallAgent extends ReActAgent {
                     .map(toolCall -> String.format("工具名称：%s，参数：%s", toolCall.name(), toolCall.arguments()))
                     .collect(Collectors.joining("\n"));
             log.info(toolCallInfo);
-            // 如果不需要调用工具，返回 false
+            // 如果不需要调用工具，AI 的文本回复就是最终答案
             if (toolCallList.isEmpty()) {
                 // 只有不调用工具时，才需要手动记录助手消息
                 getMessageList().add(assistantMessage);
+                this.finalAnswerText = result;
                 return false;
             } else {
                 // 需要调用工具时，无需记录助手消息，因为调用工具时会自动记录
@@ -131,5 +139,27 @@ public class ToolCallAgent extends ReActAgent {
                 .collect(Collectors.joining("\n"));
         log.info(results);
         return results;
+    }
+
+    /**
+     * 重写 step()：当 AI 不需要工具调用时，将其文本回复作为最终答案并终止循环
+     */
+    @Override
+    public String step() {
+        try {
+            boolean shouldAct = think();
+            if (!shouldAct) {
+                // AI 不需要工具调用 —— 它的文本回复就是最终答案
+                if (StrUtil.isNotBlank(finalAnswerText)) {
+                    setState(AgentState.FINISHED);
+                    return finalAnswerText;
+                }
+                return "思考完成 - 无需行动";
+            }
+            return act();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "步骤执行失败：" + e.getMessage();
+        }
     }
 }

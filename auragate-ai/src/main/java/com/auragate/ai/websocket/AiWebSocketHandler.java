@@ -32,7 +32,7 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
     private ToolCallback[] allTools;
 
     @Resource
-    private ChatModel dashscopeChatModel;
+    private ChatModel openAiChatModel;
 
     /** 在线会话列表 */
     private static final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -53,7 +53,7 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
         conversationService.saveUserMessage(uid, payload);
 
         // 2. 创建 AuraAgent 并流式运行
-        AuraAgent agent = new AuraAgent(allTools, dashscopeChatModel);
+        AuraAgent agent = new AuraAgent(allTools, openAiChatModel);
 
         agent.runStream(payload,
                 // dataEmitter — 每步结果推送到 WebSocket

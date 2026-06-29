@@ -16,11 +16,18 @@
             </div>
           </div>
         </div>
-        <!-- Streaming indicator -->
-        <div v-if="streaming" style="display: flex; align-items: center; gap: 8px; color: #999;">
+        <!-- Streaming indicator — only when actually connected -->
+        <div v-if="streaming && connectionState === 'connected'" style="display: flex; align-items: center; gap: 8px; color: #999;">
           <el-icon class="is-loading"><Loading /></el-icon>
           <span>AI 正在思考...</span>
         </div>
+      </div>
+      <!-- Connection status banner -->
+      <div v-if="connectionState === 'connecting'" style="text-align: center; padding: 4px 0 12px 0; color: #e6a23c; font-size: 13px;">
+        <el-icon class="is-loading"><Loading /></el-icon> 正在连接 AI 服务...
+      </div>
+      <div v-else-if="connectionState === 'error'" style="text-align: center; padding: 4px 0 12px 0; color: #f56c6c; font-size: 13px;">
+        <el-icon><WarningFilled /></el-icon> 连接失败，请检查后端服务是否启动
       </div>
       <!-- Input area -->
       <div style="display: flex; gap: 12px;">
@@ -52,6 +59,7 @@ const messages = ref([
   { role: 'assistant', content: '你好！我是 AuraAgent，有什么可以帮你的吗？' },
 ])
 const streaming = ref(false)
+const connectionState = ref('idle') // 'idle' | 'connecting' | 'connected' | 'error'
 const msgContainer = ref(null)
 let ws = null
 
@@ -62,6 +70,7 @@ function sendMessage() {
   messages.value.push({ role: 'user', content: text })
   input.value = ''
   streaming.value = true
+  connectionState.value = 'connecting'
   scrollToBottom()
 
   // Add placeholder for streaming response
@@ -80,24 +89,30 @@ function sendMessage() {
     // onDone
     () => {
       streaming.value = false
+      connectionState.value = 'idle'
       scrollToBottom()
     },
     // onError
     () => {
       messages.value[lastIdx].content = '连接失败，请稍后重试。\n\n提示：请确保后端已启动，且 WebSocket 端点 /ws/ai 可用。'
       streaming.value = false
+      connectionState.value = 'error'
+      scrollToBottom()
+    },
+    // onOpen — 连接建立后发送消息（注册在函数内部，避免时序竞争）
+    () => {
+      connectionState.value = 'connected'
+      ws.send(text)
       scrollToBottom()
     },
   )
-
-  // Send the message after connection opens
-  ws.onopen = () => ws.send(text)
 }
 
 function clearChat() {
   if (ws) ws.close()
   messages.value = [{ role: 'assistant', content: '你好！我是 AuraAgent，有什么可以帮你的吗？' }]
   streaming.value = false
+  connectionState.value = 'idle'
 }
 
 function scrollToBottom() {

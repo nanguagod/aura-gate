@@ -56,7 +56,7 @@ public class PgVectorDataSourceConfig {
 
     @Bean
     public VectorStore pgVectorVectorStore(@Qualifier("pgJdbcTemplate") JdbcTemplate jdbcTemplate,
-                                           EmbeddingModel dashscopeEmbeddingModel) {
+                                           @Qualifier("dashscopeEmbeddingModel") EmbeddingModel dashscopeEmbeddingModel) {
         return PgVectorStore.builder(jdbcTemplate, dashscopeEmbeddingModel)
                 .dimensions(1536)
                 .distanceType(COSINE_DISTANCE)
