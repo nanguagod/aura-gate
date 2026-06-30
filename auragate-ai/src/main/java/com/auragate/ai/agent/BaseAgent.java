@@ -73,8 +73,8 @@ public abstract class BaseAgent {
                 log.info("Executing step {}/{}", stepNumber, maxSteps);
                 // 单步执行
                 String stepResult = step();
-                String result = "Step " + stepNumber + ": " + stepResult;
-                results.add(result);
+                // 直接输出步骤结果，不加 Step 前缀（step 信息已记录在日志中）
+                results.add(stepResult);
             }
             // 检查是否超出步骤限制
             if (currentStep >= maxSteps) {
@@ -95,9 +95,10 @@ public abstract class BaseAgent {
     /**
      * 运行代理（流式输出，通过回调推送数据）
      * <p>推荐方式：可用于 WebSocket 等非 HTTP 流式场景</p>
+     * <p><b>重要：</b>不会推送中间工具调用结果到前端，只在最终完成时推送最终答案。</p>
      *
      * @param userPrompt  用户提示词
-     * @param dataEmitter 每步结果回调（可多次调用）
+     * @param dataEmitter 最终结果回调（只调用一次）
      * @param onComplete  完成回调
      * @param onError     错误回调
      */
@@ -120,20 +121,20 @@ public abstract class BaseAgent {
                 this.state = AgentState.RUNNING;
                 // 记录消息上下文
                 messageList.add(new UserMessage(userPrompt));
-                // 执行循环
+                // 执行循环 — 不推送中间结果到前端
                 for (int i = 0; i < maxSteps && state != AgentState.FINISHED; i++) {
                     int stepNumber = i + 1;
                     currentStep = stepNumber;
                     log.info("Executing step {}/{}", stepNumber, maxSteps);
-                    // 单步执行
-                    String stepResult = step();
-                    String result = "Step " + stepNumber + ": " + stepResult;
-                    dataEmitter.accept(result);
+                    step();
                 }
-                // 检查是否超出步骤限制
-                if (currentStep >= maxSteps) {
+                // 3、推送最终答案
+                String answer = getFinalAnswer();
+                if (StrUtil.isNotBlank(answer)) {
+                    dataEmitter.accept(answer);
+                } else if (currentStep >= maxSteps && state != AgentState.FINISHED) {
                     state = AgentState.FINISHED;
-                    dataEmitter.accept("执行结束：达到最大步骤（" + maxSteps + "）");
+                    dataEmitter.accept("处理达到最大步骤（" + maxSteps + "），请尝试更具体的问题。");
                 }
                 onComplete.run();
             } catch (Exception e) {
@@ -141,7 +142,7 @@ public abstract class BaseAgent {
                 log.error("error executing agent", e);
                 onError.accept(e);
             } finally {
-                // 3、清理资源
+                // 4、清理资源
                 this.cleanup();
             }
         });
@@ -193,6 +194,13 @@ public abstract class BaseAgent {
      * @return
      */
     public abstract String step();
+
+    /**
+     * 获取最终答案（子类覆盖）
+     */
+    public String getFinalAnswer() {
+        return "";
+    }
 
     /**
      * 清理资源

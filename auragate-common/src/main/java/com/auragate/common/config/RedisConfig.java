@@ -24,9 +24,13 @@ public class RedisConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
 
-        // 白名单模式：仅允许 com.auragate 包下的类反序列化，防止 RCE 攻击
+        // 白名单模式：允许 com.auragate 包 + 标准 Java 集合/基础类型反序列化
+        // 注意：Redis 中的 LoginUser/Menu 等对象包含 LinkedList/HashMap 等 JDK 类型，
+        // 必须同时放行 java.util 和 java.lang 包，否则反序列化会失败
         PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
                 .allowIfBaseType("com.auragate.")
+                .allowIfBaseType("java.util.")
+                .allowIfBaseType("java.lang.")
                 .build();
         mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
         serializer.setObjectMapper(mapper);

@@ -142,6 +142,14 @@ public class ToolCallAgent extends ReActAgent {
     }
 
     /**
+     * 覆盖父类，返回 AI 的最终自然语言回复（非工具调用结果）
+     */
+    @Override
+    public String getFinalAnswer() {
+        return finalAnswerText != null ? finalAnswerText : "";
+    }
+
+    /**
      * 重写 step()：当 AI 不需要工具调用时，将其文本回复作为最终答案并终止循环
      */
     @Override

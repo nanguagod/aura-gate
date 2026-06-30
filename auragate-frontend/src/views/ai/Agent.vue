@@ -6,7 +6,7 @@
       <div ref="msgContainer" style="flex: 1; overflow-y: auto; padding: 16px; background: #fafafa; border-radius: 8px; margin-bottom: 16px;">
         <div v-for="(msg, idx) in messages" :key="idx" style="margin-bottom: 16px; display: flex; flex-direction: column; align-items: flex-start;">
           <div v-if="msg.role === 'user'" style="width: 100%; display: flex; justify-content: flex-end;">
-            <el-tag type="primary" style="max-width: 70%; white-space: pre-wrap; padding: 8px 12px; font-size: 14px;">
+            <el-tag type="primary" effect="dark" style="max-width: 70%; white-space: pre-wrap; padding: 8px 12px; font-size: 14px;">
               {{ msg.content }}
             </el-tag>
           </div>
@@ -127,9 +127,3 @@ onUnmounted(() => {
   if (ws) ws.close()
 })
 </script>
-
-<style scoped>
-.el-tag.el-tag--primary {
-  --el-tag-text-color: #fff;
-}
-</style>
