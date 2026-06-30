@@ -7,7 +7,12 @@ import com.auragate.ai.rag.HybridSearchService;
 import com.auragate.ai.rag.TokenTextSplitter;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,6 +40,10 @@ public class KnowledgeService {
 
     @Resource
     private ElasticsearchClient elasticsearchClient;
+
+    @Resource
+    @Qualifier("openAiChatModel")
+    private ChatModel chatModel;
 
     /** ES 知识库索引 */
     private static final String ES_INDEX = "auragate_knowledge";
@@ -111,15 +120,59 @@ public class KnowledgeService {
         // 2. 构建上下文
         StringBuilder context = new StringBuilder();
         for (var doc : docs) {
-            context.append(doc.getOrDefault("content", "")).append("\n\n");
+            context.append("【来源: ")
+                    .append(doc.getOrDefault("source", "unknown"))
+                    .append(" 相关度: ")
+                    .append(String.format("%.4f", ((Number) doc.getOrDefault("score", 0.0)).floatValue()))
+                    .append("】\n")
+                    .append(doc.getOrDefault("content", ""))
+                    .append("\n\n");
         }
 
-        // 3. 返回检索到的上下文（完整 RAG 需接入 LLM，后续扩展）
         if (context.isEmpty()) {
-            return "未找到相关文档。";
+            return "未在知识库中找到与您问题相关的文档，请尝试更换关键词或上传相关文档。";
         }
 
-        return "根据知识库检索到以下相关内容：\n\n" + context.toString().trim();
+        // 3. 构建 RAG Prompt
+        String systemPrompt = """
+                你是一个知识库问答助手。根据用户提供的知识库文档内容回答用户的问题。
+
+                规则：
+                1. 仅根据提供的文档内容作答，不要编造文档中没有的信息
+                2. 如果文档内容不足以回答，请如实告知
+                3. 回答时尽量引用文档中的具体内容
+                4. 使用中文回答，条理清晰
+                """;
+
+        String userPrompt = """
+                用户问题：%s
+
+                知识库检索到的相关文档内容：
+                %s
+
+                请根据以上文档内容回答用户的问题。
+                """.formatted(query, context.toString().trim());
+
+        // 4. 调用 LLM 生成回答
+        try {
+            var chatResponse = chatModel.call(new Prompt(
+                    List.of(
+                            new SystemMessage(systemPrompt),
+                            new UserMessage(userPrompt)
+                    )
+            ));
+            var output = chatResponse.getResult();
+            if (output != null) {
+                String answer = output.getOutput().getText();
+                log.info("RAG 回答生成成功: query={}, answerLength={}", query, answer != null ? answer.length() : 0);
+                return answer;
+            }
+        } catch (Exception e) {
+            log.error("LLM 调用失败，降级为纯检索结果: query={}", query, e);
+        }
+
+        // 降级：如果 LLM 调用失败，返回检索结果原文
+        return "（LLM 生成失败，以下为检索原文）\n\n" + context.toString().trim();
     }
 
     /**
