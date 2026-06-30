@@ -15,13 +15,12 @@ spring:
   datasource:
     pgvector:
       url: jdbc:postgresql://localhost:5432/auragate_ai
-      username: postgres
-      password: postgres
+      username: ${PG_USERNAME:postgres}
+      password: ${PG_PASSWORD:postgres}
       driver-class-name: org.postgresql.Driver
 
 # AI 模块配置
-search-api:
-  api-key: your-api-key-here
+# 搜索使用 DuckDuckGo HTML 版，无需 API Key
 
 logging:
   level:
