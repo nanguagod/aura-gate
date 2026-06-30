@@ -5,6 +5,7 @@ import com.auragate.rbac.domain.RegisterBody;
 import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;
 import jakarta.annotation.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class RegisterController extends BaseController{
     @Resource
     private IUserService userService;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 注册
@@ -36,7 +40,7 @@ public class RegisterController extends BaseController{
         //创建用户对象
         User newUser = new User();
         newUser.setUserName(userName);
-        newUser.setPassword(password);
+        newUser.setPassword(passwordEncoder.encode(password));
 
         //执行注册逻辑
         boolean regFlag = userService.registerUser(newUser);

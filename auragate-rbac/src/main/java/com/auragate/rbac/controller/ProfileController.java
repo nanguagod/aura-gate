@@ -8,6 +8,7 @@ import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;
 import com.auragate.rbac.utils.SecurityUtils;
 import jakarta.annotation.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +27,9 @@ import java.util.UUID;
 public class ProfileController extends BaseController {
     @Resource
     private IUserService userService;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 头像上传
@@ -147,19 +151,20 @@ public class ProfileController extends BaseController {
         LoginUser loginUser = SecurityUtils.getLoginUser();
         User user = loginUser.getUser();
 
-        //用户密码修改前的密码
+        //用户密码修改前的密码 (BCrypt)
         String password = user.getPassword();
-        if (newPassword.equals(password)) {
+        if (passwordEncoder.matches(newPassword, password)) {
             return error("新密码不能与旧密码相同");
         }
-        if (!oldPassword.equals(password)) {
+        if (!passwordEncoder.matches(oldPassword, password)) {
             return error("旧密码错误");
         }
 
-        //修改该用户的密码
-        if (userService.resetUserPwd(user.getUserId(), newPassword) > 0) {
+        // 对新密码进行 BCrypt 加密后存储
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        if (userService.resetUserPwd(user.getUserId(), encodedNewPassword) > 0) {
             //更新缓存用户密码
-            loginUser.getUser().setPassword(newPassword);
+            loginUser.getUser().setPassword(encodedNewPassword);
             return success();
         }
 

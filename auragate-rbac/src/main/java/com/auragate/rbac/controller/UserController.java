@@ -5,6 +5,7 @@ import com.auragate.rbac.domain.TableDataInfo;
 import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;
 import jakarta.annotation.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,9 @@ import java.util.List;
 public class UserController extends BaseController{
     @Resource
     private IUserService userService;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 查询用户列表
@@ -44,6 +48,8 @@ public class UserController extends BaseController{
      */
     @PostMapping("/insertUser")
     public AjaxResult insertUser(@RequestBody User user) {
+        // BCrypt 加密用户密码
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return toAjax(userService.insertUser(user));
     }
 

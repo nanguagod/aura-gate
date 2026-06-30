@@ -9,6 +9,7 @@ import com.auragate.rbac.service.IUserService;
 import com.auragate.rbac.utils.SecurityUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +25,9 @@ public class LoginController extends BaseController {
 
     @Resource
     private TokenService tokenService;
+
+    @Resource
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 登录接口
@@ -43,8 +47,8 @@ public class LoginController extends BaseController {
             throw new RuntimeException("用户名错误");
         }
 
-        //步骤3: 验证密码是否正确
-        if (!loginBody.getPassword().equals(user.getPassword())) {
+        //步骤3: 验证密码是否正确 (BCrypt)
+        if (!passwordEncoder.matches(loginBody.getPassword(), user.getPassword())) {
             throw new RuntimeException("密码错误");
         }
 

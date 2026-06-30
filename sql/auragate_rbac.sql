@@ -67,7 +67,7 @@ CREATE TABLE `role_menu` (
 
 -- 初始化数据
 INSERT INTO `user` (`user_id`, `user_name`, `password`, `nickname`, `status`) VALUES
-(1, 'admin', '123456', '管理员', 0);
+(1, 'admin', '$2b$10$PsMT9haTL4obn7R/PEcEROptLeci87nwGLEfG9CikvkoXF2gnOegy', '管理员', 0);
 
 INSERT INTO `role` (`id`, `role_name`, `role_key`, `status`) VALUES
 (1, '管理员', 'admin', 0);
