@@ -253,7 +253,6 @@ public class KnowledgeService {
             return text;
         }
     }
-}
 
     /**
      * 提取 DOCX 文本
@@ -277,6 +276,53 @@ public class KnowledgeService {
             log.info("DOCX 解析成功: paragraphs={}, tables={}, chars={}",
                     doc.getParagraphs().size(), doc.getTables().size(), text.length());
             return text.toString();
+        }
+    }
+
+    /**
+     * 删除文档 — 同时清理 PGVector 和 Elasticsearch
+     *
+     * @param title 文档标题
+     * @return 是否成功
+     */
+    public boolean deleteDocument(String title) {
+        try {
+            // 1. 从 ES 查询该文档的所有 chunk ID
+            var response = elasticsearchClient.search(s -> s
+                    .index(ES_INDEX)
+                    .size(500)
+                    .query(q -> q.match(m -> m.field("title").query(title)))
+                    .source(src -> src.fetch(false)),
+                    Map.class
+            );
+
+            List<String> chunkIds = new ArrayList<>();
+            for (var hit : response.hits().hits()) {
+                if (hit.id() != null) {
+                    chunkIds.add(hit.id());
+                }
+            }
+
+            if (chunkIds.isEmpty()) {
+                log.warn("未找到要删除的文档: title={}", title);
+                return false;
+            }
+
+            // 2. 从 ES 删除
+            elasticsearchClient.deleteByQuery(d -> d
+                    .index(ES_INDEX)
+                    .query(q -> q.match(m -> m.field("title").query(title)))
+            );
+            log.info("ES 文档删除成功: title={}, chunks={}", title, chunkIds.size());
+
+            // 3. 从 PGVector 删除
+            vectorStore.delete(chunkIds);
+            log.info("PGVector 文档删除成功: title={}, chunks={}", title, chunkIds.size());
+
+            return true;
+        } catch (Exception e) {
+            log.error("删除文档失败: title={}", title, e);
+            return false;
         }
     }
 }

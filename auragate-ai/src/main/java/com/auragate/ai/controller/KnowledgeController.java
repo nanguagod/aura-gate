@@ -49,4 +49,13 @@ public class KnowledgeController {
     public Map<String, Object> list() {
         return Map.of("documents", knowledgeService.listDocuments());
     }
+
+    /**
+     * 删除文档
+     */
+    @DeleteMapping("/delete")
+    public Map<String, Object> delete(@RequestParam String title) {
+        boolean ok = knowledgeService.deleteDocument(title);
+        return Map.of("success", ok, "message", ok ? "删除成功" : "删除失败");
+    }
 }
