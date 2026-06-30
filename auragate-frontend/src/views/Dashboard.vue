@@ -45,28 +45,43 @@
 </template>
 
 <script setup>
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getDashboardStats } from '@/api/dashboard'
 
 const router = useRouter()
 
 function navigateTo(path) {
-  console.log('[Dashboard] navigateTo:', path, 'router:', !!router)
   try {
     router.push(path).catch(err => {
-      console.error('[Dashboard] router.push rejected:', err)
+      console.error('[Dashboard] navigateTo rejected:', err)
       ElMessage.error('导航失败: ' + (err?.message || '未知错误'))
     })
   } catch (e) {
-    console.error('[Dashboard] router.push threw:', e)
+    console.error('[Dashboard] navigateTo threw:', e)
     ElMessage.error('导航失败: ' + (e?.message || String(e)))
   }
 }
 
-const cards = [
-  { title: '用户数', value: 1, icon: 'User', color: '#409eff' },
-  { title: '菜单数', value: 4, icon: 'Menu', color: '#67c23a' },
+const cards = reactive([
+  { title: '用户数', value: '-', icon: 'User', color: '#409eff' },
+  { title: '菜单数', value: '-', icon: 'Menu', color: '#67c23a' },
   { title: 'AI 对话', value: '-', icon: 'ChatDotSquare', color: '#e6a23c' },
   { title: '知识文档', value: '-', icon: 'Document', color: '#f56c6c' },
-]
+])
+
+onMounted(async () => {
+  try {
+    const res = await getDashboardStats()
+    if (res.code === 200 && res.data) {
+      cards[0].value = res.data.userCount ?? '-'
+      cards[1].value = res.data.menuCount ?? '-'
+      cards[2].value = res.data.aiConversationCount ?? '-'
+      cards[3].value = res.data.knowledgeDocCount ?? '-'
+    }
+  } catch (e) {
+    console.warn('[Dashboard] 获取统计数据失败', e)
+  }
+})
 </script>
