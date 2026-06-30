@@ -176,10 +176,43 @@ public class KnowledgeService {
     }
 
     /**
-     * 获取所有文档列表（从 PGVector 查询）
+     * 获取所有文档列表（从 ES 查询，按标题去重）
      */
     public List<Map<String, Object>> listDocuments() {
-        // 简化实现 — 后续可扩展为从数据库查询文档元数据
-        return Collections.emptyList();
+        try {
+            var response = elasticsearchClient.search(s -> s
+                    .index(ES_INDEX)
+                    .size(1000)
+                    .source(src -> src
+                            .filter(f -> f.includes(List.of("title", "author", "filename", "uploadTime")))
+                    ),
+                    Map.class
+            );
+
+            // 按 title 去重，合并 chunks 计数
+            List<Map<String, Object>> docs = new ArrayList<>();
+            Set<String> seenTitles = new HashSet<>();
+
+            for (var hit : response.hits().hits()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> source = (Map<String, Object>) hit.source();
+                if (source == null) continue;
+                String title = (String) source.getOrDefault("title", "");
+                if (title.isEmpty() || seenTitles.contains(title)) continue;
+                seenTitles.add(title);
+
+                Map<String, Object> doc = new LinkedHashMap<>();
+                doc.put("title", source.getOrDefault("title", "未知"));
+                doc.put("author", source.getOrDefault("author", "未知"));
+                doc.put("filename", source.getOrDefault("filename", "未知"));
+                doc.put("uploadTime", source.getOrDefault("uploadTime", 0L));
+                docs.add(doc);
+            }
+
+            return docs;
+        } catch (Exception e) {
+            log.warn("从 ES 查询文档列表失败，返回空列表", e);
+            return Collections.emptyList();
+        }
     }
 }
