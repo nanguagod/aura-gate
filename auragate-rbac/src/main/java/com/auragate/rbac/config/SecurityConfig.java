@@ -4,7 +4,6 @@ import com.auragate.rbac.configure.JwtAuthenticationEntryPoint;
 import com.auragate.rbac.configure.JwtAuthenticationTokenFilter;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.ibatis.javassist.bytecode.analysis.Frame;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -62,9 +61,21 @@ public class SecurityConfig {
                 //但是前后端分离 + JWT认证的情况下, 可以关闭, 因为每次请求都携带token
                 .csrf(AbstractHttpConfigurer::disable)
 
-                //3.响应头配置 - 防止点击劫持攻击的工具
-                // 就像告诉浏览器: "你不要让别人把我家的网页嵌入到他们的网页里"
-                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                //3.安全响应头配置
+                .headers(headers -> headers
+                        // 防止点击劫持
+                        .frameOptions(frame -> frame.sameOrigin())
+                        // X-Content-Type-Options — 禁止 MIME 类型嗅探
+                        .contentTypeOptions(Customizer.withDefaults())
+                        // Referrer-Policy — 限制 Referer 泄露
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN
+                        ))
+                        // X-XSS-Protection — 启用浏览器 XSS 过滤器
+                        .xssProtection(xss -> xss.headerValue(
+                                org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK
+                        ))
+                )
 
                 //4.禁用Session - 使用无状态认证(JWT)
                 // 每次请求都独立验证, 不需要记住用户的登录状态
