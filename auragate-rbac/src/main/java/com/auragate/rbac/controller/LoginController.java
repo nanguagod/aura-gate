@@ -1,5 +1,6 @@
 package com.auragate.rbac.controller;
 
+import com.auragate.common.util.RateLimiterService;
 import com.auragate.rbac.configure.TokenService;
 import com.auragate.rbac.domain.AjaxResult;
 import com.auragate.rbac.domain.LoginBody;
@@ -9,6 +10,7 @@ import com.auragate.rbac.service.IUserService;
 import com.auragate.rbac.utils.SecurityUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,12 +31,21 @@ public class LoginController extends BaseController {
     @Resource
     private PasswordEncoder passwordEncoder;
 
+    @Resource
+    private RateLimiterService rateLimiterService;
+
     /**
      * 登录接口
      */
     @PostMapping("/login")
-    public AjaxResult login(@RequestBody LoginBody loginBody) {
-        //步骤1: 验证参数是否为空
+    public AjaxResult login(@RequestBody LoginBody loginBody, HttpServletRequest request) {
+        // 步骤0: IP 限流 — 每 IP 每分钟最多 5 次登录尝试
+        String clientIp = RateLimiterService.getClientIp(request);
+        if (!rateLimiterService.tryAcquire("login:" + clientIp, 5, 60_000)) {
+            throw new RuntimeException("请求过于频繁，请稍后重试");
+        }
+
+        // 步骤1: 验证参数是否为空
         if (loginBody.getUserName() == null || loginBody.getPassword() == null
             || loginBody.getUserName().trim().isEmpty() || loginBody.getPassword().trim().isEmpty()) {
             //抛出异常

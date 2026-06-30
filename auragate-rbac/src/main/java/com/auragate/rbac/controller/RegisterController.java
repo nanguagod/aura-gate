@@ -1,10 +1,12 @@
 package com.auragate.rbac.controller;
 
+import com.auragate.common.util.RateLimiterService;
 import com.auragate.rbac.domain.AjaxResult;
 import com.auragate.rbac.domain.RegisterBody;
 import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,11 +23,20 @@ public class RegisterController extends BaseController{
     @Resource
     private PasswordEncoder passwordEncoder;
 
+    @Resource
+    private RateLimiterService rateLimiterService;
+
     /**
      * 注册
      */
     @PostMapping("/register")
-    public AjaxResult register(@RequestBody RegisterBody registerBody) {
+    public AjaxResult register(@RequestBody RegisterBody registerBody, HttpServletRequest request) {
+        // IP 限流 — 每 IP 每分钟最多 3 次注册
+        String clientIp = RateLimiterService.getClientIp(request);
+        if (!rateLimiterService.tryAcquire("register:" + clientIp, 3, 60_000)) {
+            return error("请求过于频繁，请稍后重试");
+        }
+
         String userName = registerBody.getUserName();
         String password = registerBody.getPassword();
 
