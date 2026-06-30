@@ -46,9 +46,13 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    await userStore.login(form.username, form.password)
-    ElMessage.success('登录成功')
-    router.push('/dashboard')
+    const res = await userStore.login(form.username, form.password)
+    if (res && res.code === 200) {
+      ElMessage.success('登录成功')
+      router.push('/dashboard')
+    } else {
+      ElMessage.error(res?.msg || '登录失败')
+    }
   } catch (e) {
     // error handled by interceptor
   } finally {
