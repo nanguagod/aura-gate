@@ -11,55 +11,47 @@
       active-text-color="#409eff"
       style="border-right: none;"
     >
+      <!-- 仪表盘始终在第一位 -->
       <el-menu-item index="/dashboard">
         <el-icon><DataBoard /></el-icon>
         <span>仪表盘</span>
       </el-menu-item>
 
-      <el-sub-menu index="system">
-        <template #title>
-          <el-icon><Setting /></el-icon>
-          <span>系统管理</span>
-        </template>
-        <el-menu-item index="/system/user">
-          <el-icon><User /></el-icon>
-          <span>用户管理</span>
+      <!-- 动态菜单：从后端 getRouters() 读取 -->
+      <template v-for="menu in dynamicMenus" :key="menu.path">
+        <!-- 有子菜单 → 渲染为分组 -->
+        <el-sub-menu v-if="menu.children && menu.children.length" :index="menu.path">
+          <template #title>
+            <el-icon v-if="menu.meta?.icon"><component :is="menu.meta.icon" /></el-icon>
+            <span>{{ menu.meta?.title || menu.name }}</span>
+          </template>
+          <el-menu-item
+            v-for="child in menu.children"
+            :key="child.path"
+            :index="child.path"
+          >
+            <el-icon v-if="child.meta?.icon"><component :is="child.meta.icon" /></el-icon>
+            <span>{{ child.meta?.title || child.name }}</span>
+          </el-menu-item>
+        </el-sub-menu>
+        <!-- 无子菜单 → 直接渲染为菜单项 -->
+        <el-menu-item v-else :index="menu.path">
+          <el-icon v-if="menu.meta?.icon"><component :is="menu.meta.icon" /></el-icon>
+          <span>{{ menu.meta?.title || menu.name }}</span>
         </el-menu-item>
-        <el-menu-item index="/system/role">
-          <el-icon><Avatar /></el-icon>
-          <span>角色管理</span>
-        </el-menu-item>
-        <el-menu-item index="/system/menu">
-          <el-icon><Menu /></el-icon>
-          <span>菜单管理</span>
-        </el-menu-item>
-      </el-sub-menu>
-
-      <el-sub-menu index="ai">
-        <template #title>
-          <el-icon><MagicStick /></el-icon>
-          <span>AI 智能体</span>
-        </template>
-        <el-menu-item index="/ai/agent">
-          <el-icon><ChatDotSquare /></el-icon>
-          <span>AI 对话</span>
-        </el-menu-item>
-      </el-sub-menu>
-
-      <el-sub-menu index="knowledge">
-        <template #title>
-          <el-icon><Document /></el-icon>
-          <span>知识库</span>
-        </template>
-        <el-menu-item index="/knowledge/docs">
-          <el-icon><FolderOpened /></el-icon>
-          <span>文档管理</span>
-        </el-menu-item>
-        <el-menu-item index="/knowledge/qa">
-          <el-icon><ChatDotRound /></el-icon>
-          <span>知识问答</span>
-        </el-menu-item>
-      </el-sub-menu>
+      </template>
     </el-menu>
   </el-aside>
 </template>
+
+<script setup>
+import { computed } from 'vue'
+import { useUserStore } from '@/stores/userStore'
+
+const userStore = useUserStore()
+
+// 从 store 读取后端动态菜单；若未加载则显示空避免重复
+const dynamicMenus = computed(() => {
+  return userStore.menus || []
+})
+</script>
