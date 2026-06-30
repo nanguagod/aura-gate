@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -56,8 +57,8 @@ public class KnowledgeService {
      * @param author  作者
      */
     public Map<String, Object> uploadDocument(MultipartFile file, String title, String author) throws IOException {
-        // 1. 读取文件内容
-        String content = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        // 1. 根据文件类型提取文本
+        String content = extractText(file);
 
         // 2. 分割文本
         var documents = textSplitter.splitDocuments(List.of(
@@ -213,6 +214,69 @@ public class KnowledgeService {
         } catch (Exception e) {
             log.warn("从 ES 查询文档列表失败，返回空列表", e);
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 根据文件类型提取文本内容
+     */
+    private String extractText(MultipartFile file) throws IOException {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            return new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        String lower = originalFilename.toLowerCase();
+
+        if (lower.endsWith(".pdf")) {
+            return extractPdfText(file);
+        } else if (lower.endsWith(".docx")) {
+            return extractDocxText(file);
+        } else if (lower.endsWith(".doc")) {
+            // 旧版 .doc 格式：提示用户转换为 .docx 再上传
+            throw new IOException("不支持旧版 .doc 格式，请将文档转换为 .docx 格式后重新上传");
+        } else {
+            // 纯文本 / markdown / html 等
+            return new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
+    /**
+     * 提取 PDF 文本
+     */
+    private String extractPdfText(MultipartFile file) throws IOException {
+        try (org.apache.pdfbox.pdmodel.PDDocument document =
+                     org.apache.pdfbox.Loader.loadPDF(file.getBytes())) {
+            var stripper = new org.apache.pdfbox.text.PDFTextStripper();
+            String text = stripper.getText(document);
+            log.info("PDF 解析成功: pages={}, chars={}", document.getNumberOfPages(), text.length());
+            return text;
+        }
+    }
+}
+
+    /**
+     * 提取 DOCX 文本
+     */
+    private String extractDocxText(MultipartFile file) throws IOException {
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument(
+                new ByteArrayInputStream(file.getBytes()))) {
+            StringBuilder text = new StringBuilder();
+            for (var paragraph : doc.getParagraphs()) {
+                text.append(paragraph.getText()).append("\n");
+            }
+            // 同时提取表格中的文本
+            for (var table : doc.getTables()) {
+                for (var row : table.getRows()) {
+                    for (var cell : row.getTableCells()) {
+                        text.append(cell.getText()).append(" ");
+                    }
+                    text.append("\n");
+                }
+            }
+            log.info("DOCX 解析成功: paragraphs={}, tables={}, chars={}",
+                    doc.getParagraphs().size(), doc.getTables().size(), text.length());
+            return text.toString();
         }
     }
 }
