@@ -1,5 +1,6 @@
 package com.auragate.rbac.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -8,6 +9,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -57,39 +59,33 @@ public class ResourcesConfig implements WebMvcConfigurer {
      * 这个配置就是告诉浏览器: "允许某些外部网站可以访问我"
      *
      */
+    @Value("${app.cors.allowed-origins:http://localhost:5175}")
+    private String allowedOrigins;
+
     @Bean //告诉spring: 这个方法返回的对象要放到容器里进行管理
     public CorsConfigurationSource corsConfigurationSource() {
         //创建一个跨域配置对象, 相当与"通行证的规则手册"
         CorsConfiguration config = new CorsConfiguration();
 
-        //1.允许哪些来源访问(允许所有来源)
-        //就像是: 允许所有省份的车辆进入 (* 表示通配符, 陪陪所有)
-        config.setAllowedOriginPatterns(Collections.singletonList("*"));
+        //1.允许哪些来源访问（从配置读取，默认开发环境 localhost:5175）
+        config.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
 
         //2.允许携带哪些请求头
-        //就像是: 允许车辆携带各种证件(驾驶证等等)
         config.setAllowedHeaders(Collections.singletonList("*"));
 
-        //3.允许哪些HTTP方法(GET POST PUT DELETE等等)
-        //就像是: 运行车辆进行各种操作
-        config.setAllowedMethods(Collections.singletonList("*"));
+        //3.允许哪些HTTP方法(GET POST PUT DELETE OPTIONS)
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         //4.是否允许发送凭证(如: cookies HTTP认证信息)
-        //设置为true, 表示允许前端在请求时携带cookies等信息
-        //就像是: 允许访客携带自己的会员卡
         config.setAllowCredentials(true);
 
-        //5.预检请求的缓存时间(单位:秒)
-        //我们的浏览器在发送复杂请求时(比如PUT DELETE等)之前, 会先发送一个OPTIONS预检请求
-        //这个设置就是告诉浏览器: 1800秒(30分钟)之内, 不要再给我发送预检请求了
-        //就像是: 办理了一次长期通行证
-        config.setMaxAge(1800L);
+        //5.预检请求的缓存时间(单位:秒) — 1 小时
+        config.setMaxAge(3600L);
 
         //创建基于URL的跨域配置源
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
         //注册配置: 对所有路径(/**)应用上面的跨域规则
-        //就像是: 整个园区的所有大门都使用同一套通行规则
         source.registerCorsConfiguration("/**", config);
 
         return source;

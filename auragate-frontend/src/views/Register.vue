@@ -26,7 +26,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import request from '@/utils/request'
+import { register as registerApi } from '@/api/login'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -55,7 +55,7 @@ async function handleRegister() {
   if (!valid) return
   loading.value = true
   try {
-    await request.post('/register', { userName: form.username, password: form.password })
+    await registerApi(form.username, form.password)
     ElMessage.success('注册成功，请登录')
     router.push('/login')
   } catch {

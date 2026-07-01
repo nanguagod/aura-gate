@@ -55,15 +55,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
 import { listUser, addUser, updateUser, delUser } from '@/api/system/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
-
-const users = ref([])
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const submitting = ref(false)
-const formRef = ref(null)
+import { useCrud } from '@/composables/useCrud'
 
 const defaultForm = () => ({
   userId: null,
@@ -73,7 +66,6 @@ const defaultForm = () => ({
   password: '',
   status: 0
 })
-const form = ref(defaultForm())
 
 const rules = {
   userName: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -81,66 +73,27 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
-async function fetchUsers() {
-  const res = await listUser()
-  if (res.code === 200) users.value = res.rows || []
-}
+const mapRowToForm = (row) => ({
+  userId: row.userId,
+  userName: row.userName,
+  nickName: row.nickName,
+  email: row.email || '',
+  password: '',
+  status: row.status
+})
 
-function handleAdd() {
-  isEdit.value = false
-  dialogVisible.value = true
-}
-
-function handleEdit(row) {
-  isEdit.value = true
-  form.value = {
-    userId: row.userId,
-    userName: row.userName,
-    nickName: row.nickName,
-    email: row.email || '',
-    password: '',
-    status: row.status
-  }
-  dialogVisible.value = true
-}
-
-function handleDelete(row) {
-  ElMessageBox.confirm(`确定删除用户「${row.userName}」吗？`, '删除确认', {
-    type: 'warning'
-  }).then(async () => {
-    const res = await delUser(row.userId)
-    if (res.code === 200) {
-      ElMessage.success('删除成功')
-      fetchUsers()
-    } else {
-      ElMessage.error(res.msg || '删除失败')
-    }
-  }).catch(() => {})
-}
-
-async function handleSubmit() {
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
-  submitting.value = true
-  try {
-    const api = isEdit.value ? updateUser : addUser
-    const res = await api(form.value)
-    if (res.code === 200) {
-      ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
-      dialogVisible.value = false
-      fetchUsers()
-    } else {
-      ElMessage.error(res.msg || '操作失败')
-    }
-  } finally {
-    submitting.value = false
-  }
-}
-
-function resetForm() {
-  form.value = defaultForm()
-  formRef.value?.resetFields()
-}
-
-onMounted(fetchUsers)
+const {
+  items: users,
+  dialogVisible, isEdit, submitting, formRef, form,
+  handleAdd, handleEdit, handleDelete, handleSubmit, resetForm
+} = useCrud({
+  itemName: '用户',
+  listApi: listUser,
+  addApi: addUser,
+  updateApi: updateUser,
+  delApi: delUser,
+  defaultForm,
+  rules,
+  mapRowToForm
+})
 </script>

@@ -51,15 +51,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
 import { listRole, addRole, updateRole, delRole } from '@/api/system/role'
-import { ElMessage, ElMessageBox } from 'element-plus'
-
-const roles = ref([])
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const submitting = ref(false)
-const formRef = ref(null)
+import { useCrud } from '@/composables/useCrud'
 
 const defaultForm = () => ({
   roleId: null,
@@ -68,72 +61,32 @@ const defaultForm = () => ({
   roleSort: 0,
   status: 0
 })
-const form = ref(defaultForm())
 
 const rules = {
   roleName: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
   roleKey: [{ required: true, message: '请输入权限标识', trigger: 'blur' }]
 }
 
-async function fetchRoles() {
-  const res = await listRole()
-  if (res.code === 200) roles.value = res.rows || []
-}
+const mapRowToForm = (row) => ({
+  roleId: row.roleId,
+  roleName: row.roleName,
+  roleKey: row.roleKey,
+  roleSort: row.roleSort || 0,
+  status: row.status
+})
 
-function handleAdd() {
-  isEdit.value = false
-  dialogVisible.value = true
-}
-
-function handleEdit(row) {
-  isEdit.value = true
-  form.value = {
-    roleId: row.roleId,
-    roleName: row.roleName,
-    roleKey: row.roleKey,
-    roleSort: row.roleSort || 0,
-    status: row.status
-  }
-  dialogVisible.value = true
-}
-
-function handleDelete(row) {
-  ElMessageBox.confirm(`确定删除角色「${row.roleName}」吗？`, '删除确认', {
-    type: 'warning'
-  }).then(async () => {
-    const res = await delRole(row.roleId)
-    if (res.code === 200) {
-      ElMessage.success('删除成功')
-      fetchRoles()
-    } else {
-      ElMessage.error(res.msg || '删除失败')
-    }
-  }).catch(() => {})
-}
-
-async function handleSubmit() {
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
-  submitting.value = true
-  try {
-    const api = isEdit.value ? updateRole : addRole
-    const res = await api(form.value)
-    if (res.code === 200) {
-      ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
-      dialogVisible.value = false
-      fetchRoles()
-    } else {
-      ElMessage.error(res.msg || '操作失败')
-    }
-  } finally {
-    submitting.value = false
-  }
-}
-
-function resetForm() {
-  form.value = defaultForm()
-  formRef.value?.resetFields()
-}
-
-onMounted(fetchRoles)
+const {
+  items: roles,
+  dialogVisible, isEdit, submitting, formRef, form,
+  handleAdd, handleEdit, handleDelete, handleSubmit, resetForm
+} = useCrud({
+  itemName: '角色',
+  listApi: listRole,
+  addApi: addRole,
+  updateApi: updateRole,
+  delApi: delRole,
+  defaultForm,
+  rules,
+  mapRowToForm
+})
 </script>

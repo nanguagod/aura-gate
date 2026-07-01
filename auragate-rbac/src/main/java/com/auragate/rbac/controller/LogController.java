@@ -3,7 +3,7 @@ package com.auragate.rbac.controller;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.auragate.rbac.domain.log.OperationLog;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

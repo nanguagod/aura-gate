@@ -92,12 +92,11 @@ public class SecurityConfig {
                         //公开接口 - 所有人都可以访问
                         .requestMatchers("/login", "/register", "/profile/**").permitAll()
                         // WebSocket 端点 — JWT 通过 query param 传递，不走 Header 认证
+                        // 具体认证逻辑在 AiWebSocketHandler 中校验
                         .requestMatchers("/ws/**").permitAll()
-                        // AI 控制器 SSE 端点
-                        .requestMatchers("/ai/**").permitAll()
                         // 健康检查
                         .requestMatchers("/health").permitAll()
-                        //其他所有请求都需要认证
+                        //其他所有请求（含 /ai/**）都需要认证
                         .anyRequest().authenticated()
                 )
 

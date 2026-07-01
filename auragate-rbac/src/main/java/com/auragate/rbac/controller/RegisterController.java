@@ -1,7 +1,7 @@
 package com.auragate.rbac.controller;
 
 import com.auragate.common.util.RateLimiterService;
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.auragate.rbac.domain.RegisterBody;
 import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;

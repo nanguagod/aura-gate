@@ -53,8 +53,10 @@ public class WebSocketAiConfig implements WebSocketConfigurer {
                                         String userJson = claims.get("user_key", String.class);
                                         LoginUser loginUser = objectMapper.readValue(userJson, LoginUser.class);
                                         attributes.put("userId", loginUser.getUserId());
+                                        attributes.put("authenticated", true);
                                     } catch (Exception ignored) {
-                                        // token 无效 — 允许连接但 userId 为 0
+                                        // token 无效 — 标记未认证，连接将在 handler 中被拒绝
+                                        attributes.put("authenticated", false);
                                     }
                                     break;
                                 }

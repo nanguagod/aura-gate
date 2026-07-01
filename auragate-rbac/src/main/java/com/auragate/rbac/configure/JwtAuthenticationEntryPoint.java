@@ -1,6 +1,6 @@
 package com.auragate.rbac.configure;
 
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;

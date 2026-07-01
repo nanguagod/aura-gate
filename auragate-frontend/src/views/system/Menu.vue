@@ -72,15 +72,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { listMenu, addMenu, updateMenu, delMenu } from '@/api/system/menu'
-import { ElMessage, ElMessageBox } from 'element-plus'
-
-const menus = ref([])
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const submitting = ref(false)
-const formRef = ref(null)
+import { useCrud } from '@/composables/useCrud'
 
 const defaultForm = () => ({
   menuId: null,
@@ -92,25 +86,25 @@ const defaultForm = () => ({
   orderNum: 0,
   status: 0
 })
-const form = ref(defaultForm())
 
 const rules = {
   menuName: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }],
   path: [{ required: true, message: '请输入路由路径', trigger: 'blur' }]
 }
 
+const mapRowToForm = (row) => ({
+  menuId: row.menuId,
+  parentId: row.parentId || 0,
+  menuName: row.menuName,
+  icon: row.icon || '',
+  path: row.path || '',
+  perms: row.perms || '',
+  orderNum: row.orderNum || 0,
+  status: row.status
+})
+
 // 构建菜单树（供上级菜单选择器使用）
 const menuTree = ref([])
-
-async function fetchMenus() {
-  const res = await listMenu()
-  if (res.code === 200) {
-    menus.value = res.data || []
-    // 构建树形结构供上级菜单选择
-    const data = res.data || []
-    menuTree.value = buildTree(data, 0)
-  }
-}
 
 function buildTree(list, parentId) {
   return list
@@ -121,63 +115,27 @@ function buildTree(list, parentId) {
     }))
 }
 
-function handleAdd() {
-  isEdit.value = false
-  dialogVisible.value = true
-}
-
-function handleEdit(row) {
-  isEdit.value = true
-  form.value = {
-    menuId: row.menuId,
-    parentId: row.parentId || 0,
-    menuName: row.menuName,
-    icon: row.icon || '',
-    path: row.path || '',
-    perms: row.perms || '',
-    orderNum: row.orderNum || 0,
-    status: row.status
-  }
-  dialogVisible.value = true
-}
-
-function handleDelete(row) {
-  ElMessageBox.confirm(`确定删除菜单「${row.menuName}」吗？`, '删除确认', {
-    type: 'warning'
-  }).then(async () => {
-    const res = await delMenu(row.menuId)
-    if (res.code === 200) {
-      ElMessage.success('删除成功')
-      fetchMenus()
-    } else {
-      ElMessage.error(res.msg || '删除失败')
-    }
-  }).catch(() => {})
-}
-
-async function handleSubmit() {
-  const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
-  submitting.value = true
-  try {
-    const api = isEdit.value ? updateMenu : addMenu
-    const res = await api(form.value)
-    if (res.code === 200) {
-      ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
-      dialogVisible.value = false
-      fetchMenus()
-    } else {
-      ElMessage.error(res.msg || '操作失败')
-    }
-  } finally {
-    submitting.value = false
+async function fetchMenus() {
+  const res = await listMenu()
+  if (res.code === 200) {
+    menus.value = res.data || []
+    menuTree.value = buildTree(res.data || [], 0)
   }
 }
 
-function resetForm() {
-  form.value = defaultForm()
-  formRef.value?.resetFields()
-}
-
-onMounted(fetchMenus)
+const {
+  items: menus,
+  dialogVisible, isEdit, submitting, formRef, form,
+  handleAdd, handleEdit, handleDelete, handleSubmit, resetForm
+} = useCrud({
+  itemName: '菜单',
+  listApi: listMenu,
+  addApi: addMenu,
+  updateApi: updateMenu,
+  delApi: delMenu,
+  defaultForm,
+  rules,
+  mapRowToForm,
+  customFetch: fetchMenus
+})
 </script>

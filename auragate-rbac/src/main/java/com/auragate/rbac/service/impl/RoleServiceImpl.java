@@ -77,6 +77,10 @@ public class RoleServiceImpl implements IRoleService {
      */
     public int insetRoleMenu(Role role) {
         int rows = 1;
+        // 空菜单列表守卫
+        if (role.getMenuIds() == null || role.getMenuIds().length == 0) {
+            return 0;
+        }
         //新增用户与角色关联的数据
         ArrayList<RoleMenu> list = new ArrayList<>();
         for (Long menuId : role.getMenuIds()) {

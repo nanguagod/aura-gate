@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+
 import path from 'path'
 
 export default defineConfig({
@@ -12,6 +13,17 @@ export default defineConfig({
   define: {
     // sockjs-client 使用了 Node.js 的 global，Vite 浏览器环境需要 polyfill
     global: 'globalThis',
+  },
+  build: {
+    target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'element-plus': ['element-plus'],
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+        },
+      },
+    },
   },
   server: {
     port: 5175,

@@ -1,7 +1,7 @@
 package com.auragate.rbac.controller;
 
 import com.auragate.rbac.config.AuraGateConfig;
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

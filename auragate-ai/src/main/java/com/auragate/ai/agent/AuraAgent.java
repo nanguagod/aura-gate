@@ -4,6 +4,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -12,8 +13,10 @@ import java.util.Locale;
 
 /**
  * AuraGate 超级智能体（拥有自主规划能力，可以直接使用）
+ * Prototype 作用域 — 每次注入都创建新实例
  */
 @Component
+@Scope("prototype")
 public class AuraAgent extends ToolCallAgent {
 
     public AuraAgent(ToolCallback[] allTools, @Qualifier("openAiChatModel") ChatModel dashscopeChatModel) {

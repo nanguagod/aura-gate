@@ -4,8 +4,7 @@ import com.auragate.ai.agent.AuraAgent;
 import com.auragate.ai.service.AiConversationService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -29,16 +28,19 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
     private AiConversationService conversationService;
 
     @Resource
-    private ToolCallback[] allTools;
-
-    @Resource
-    private ChatModel openAiChatModel;
+    private ObjectProvider<AuraAgent> auraAgentProvider;
 
     /** 在线会话列表 */
     private static final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        Object authenticated = session.getAttributes().get("authenticated");
+        if (!Boolean.TRUE.equals(authenticated)) {
+            log.warn("WebSocket 未认证连接被拒绝: id={}", session.getId());
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         sessions.put(session.getId(), session);
         log.info("WebSocket 连接建立: id={}, userId={}", session.getId(), getUserId(session));
     }
@@ -53,7 +55,7 @@ public class AiWebSocketHandler extends TextWebSocketHandler {
         conversationService.saveUserMessage(uid, payload);
 
         // 2. 创建 AuraAgent 并流式运行
-        AuraAgent agent = new AuraAgent(allTools, openAiChatModel);
+        AuraAgent agent = auraAgentProvider.getObject();
 
         agent.runStream(payload,
                 // dataEmitter — 每步结果推送到 WebSocket

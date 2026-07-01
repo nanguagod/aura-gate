@@ -1,6 +1,6 @@
 package com.auragate.rbac.controller;
 
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.auragate.rbac.domain.TableDataInfo;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -72,9 +72,17 @@ public class BaseController {
         //RequestContextHolder是spring提供的, 可以在任何地方获取当前请求
         HttpServletRequest req = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
-        //获取并且转换分页参数
-        int pageNum = Integer.parseInt(req.getParameter("pageNum"));
-        int pageSize = Integer.parseInt(req.getParameter("pageSize"));
+        //获取并且转换分页参数（缺失或非数字时使用默认值）
+        int pageNum = 1;
+        int pageSize = 10;
+        try {
+            String pn = req.getParameter("pageNum");
+            String ps = req.getParameter("pageSize");
+            if (pn != null && !pn.isEmpty()) pageNum = Integer.parseInt(pn);
+            if (ps != null && !ps.isEmpty()) pageSize = Integer.parseInt(ps);
+        } catch (NumberFormatException ignored) {
+            // use defaults
+        }
 
         //PageHelper.startPage() 是PageHelper插件的核心方法
         //它会自动在接下来的第一次查询sql中加上limit语句

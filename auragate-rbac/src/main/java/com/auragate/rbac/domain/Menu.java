@@ -33,6 +33,9 @@ public class Menu {
     //菜单类型(M目录 C菜单)
     private String menuType;
 
+    //权限标识
+    private String perms;
+
     //菜单图标
     private String icon;
 

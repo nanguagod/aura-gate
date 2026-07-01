@@ -25,11 +25,16 @@ public class AiConversationService {
      */
     public void saveUserMessage(Long userId, String message) {
         String key = Constants.AI_CONTEXT_PREFIX + userId;
+        // 首次为此用户创建上下文时，递增计数器
+        Long size = redisTemplate.opsForList().size(key);
+        if (size == null || size == 0) {
+            redisTemplate.opsForValue().increment(Constants.AI_CONTEXT_COUNT_KEY);
+        }
         // 使用 List 存储消息，左推
         redisTemplate.opsForList().leftPush(key, "user: " + message);
         redisTemplate.expire(key, Constants.AI_CONTEXT_EXPIRE, TimeUnit.SECONDS);
         // 限制最多 50 条上下文
-        Long size = redisTemplate.opsForList().size(key);
+        size = redisTemplate.opsForList().size(key);
         if (size != null && size > 50) {
             redisTemplate.opsForList().trim(key, 0, 49);
         }
@@ -63,6 +68,11 @@ public class AiConversationService {
      */
     public void clearContext(Long userId) {
         String key = Constants.AI_CONTEXT_PREFIX + userId;
+        Long size = redisTemplate.opsForList().size(key);
         redisTemplate.delete(key);
+        // 上下文存在过才递减计数器
+        if (size != null && size > 0) {
+            redisTemplate.opsForValue().decrement(Constants.AI_CONTEXT_COUNT_KEY);
+        }
     }
 }

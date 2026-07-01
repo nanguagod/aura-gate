@@ -7,8 +7,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -28,10 +27,7 @@ public class AiTaskConsumer {
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     @Resource
-    private ToolCallback[] allTools;
-
-    @Resource
-    private ChatModel openAiChatModel;
+    private ObjectProvider<AuraAgent> auraAgentProvider;
 
     @RabbitHandler
     public void handleAiTask(Map<String, Object> task) {
@@ -43,11 +39,12 @@ public class AiTaskConsumer {
             log.info("处理 AI 任务: taskId={}, userId={}, message={}", taskId, userId, message);
 
             // 调用 AuraAgent 处理
-            AuraAgent agent = new AuraAgent(allTools, openAiChatModel);
+            AuraAgent agent = auraAgentProvider.getObject();
             String result = agent.run(message);
 
             // 将结果写入 Redis
             String resultKey = Constants.TASK_RESULT_PREFIX + taskId;
+            redisTemplate.opsForValue().increment(Constants.TASK_RESULT_COUNT_KEY);
             redisTemplate.opsForValue().set(resultKey, result, Constants.TASK_RESULT_EXPIRE, java.util.concurrent.TimeUnit.SECONDS);
 
             log.info("AI 任务完成: taskId={}, resultLength={}", taskId, result != null ? result.length() : 0);
@@ -57,6 +54,7 @@ public class AiTaskConsumer {
             try {
                 String taskId = (String) task.get("taskId");
                 String resultKey = Constants.TASK_RESULT_PREFIX + taskId;
+                redisTemplate.opsForValue().increment(Constants.TASK_RESULT_COUNT_KEY);
                 redisTemplate.opsForValue().set(resultKey, "AI 处理失败: " + e.getMessage(),
                         Constants.TASK_RESULT_EXPIRE, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception ex) {

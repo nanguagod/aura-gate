@@ -19,8 +19,3 @@ export function updateMenu(data) {
 export function delMenu(menuId) {
   return request.delete(`/system/menu/deleteMenuByMenuId/${menuId}`)
 }
-
-/** 获取菜单路由（用于动态侧边栏） */
-export function getRouters() {
-  return request.get('/system/menu/getRouters')
-}

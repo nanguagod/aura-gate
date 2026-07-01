@@ -1,6 +1,6 @@
 package com.auragate.rbac.controller;
 
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.auragate.rbac.domain.User;
 import com.auragate.rbac.service.IUserService;
 import com.auragate.rbac.utils.SecurityUtils;

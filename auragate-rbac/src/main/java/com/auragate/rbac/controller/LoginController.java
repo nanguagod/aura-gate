@@ -2,14 +2,17 @@ package com.auragate.rbac.controller;
 
 import com.auragate.common.util.RateLimiterService;
 import com.auragate.rbac.configure.TokenService;
-import com.auragate.rbac.domain.AjaxResult;
+import com.auragate.common.dto.AjaxResult;
 import com.auragate.rbac.domain.LoginBody;
 import com.auragate.rbac.domain.LoginUser;
+import com.auragate.rbac.domain.Menu;
 import com.auragate.rbac.domain.User;
+import com.auragate.rbac.service.IMenuService;
 import com.auragate.rbac.service.IUserService;
 import com.auragate.rbac.utils.SecurityUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +20,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * 登录验证
  */
+@Slf4j
 @RestController
 public class LoginController extends BaseController {
     @Resource
@@ -33,6 +41,9 @@ public class LoginController extends BaseController {
 
     @Resource
     private RateLimiterService rateLimiterService;
+
+    @Resource
+    private IMenuService menuService;
 
     /**
      * 登录接口
@@ -65,6 +76,21 @@ public class LoginController extends BaseController {
 
         //步骤4: 创建登录用户对象
         LoginUser loginUser = new LoginUser(user.getUserId(), user);
+
+        //步骤4.1: 加载用户权限
+        try {
+            List<Menu> menus = menuService.selectMenuList(new Menu(), user.getUserId());
+            if (menus != null) {
+                Set<String> perms = menus.stream()
+                        .map(Menu::getPerms)
+                        .filter(p -> p != null && !p.isEmpty())
+                        .collect(Collectors.toSet());
+                loginUser.setPermissions(perms);
+            }
+        } catch (Exception e) {
+            // 权限加载失败不影响登录，只记录日志
+            log.warn("加载用户权限失败, userId={}", user.getUserId(), e);
+        }
 
         //步骤5: 生成JWT令牌
         String token = tokenService.createToken(loginUser);

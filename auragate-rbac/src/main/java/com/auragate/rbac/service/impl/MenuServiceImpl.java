@@ -11,9 +11,14 @@ import com.auragate.rbac.mapper.UserRoleMapper;
 import com.auragate.rbac.service.IMenuService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -44,8 +49,8 @@ public class MenuServiceImpl implements IMenuService {
         //根据用户ID查询对应的角色ID
         Long roleId = userRoleMapper.selectRoleIdByUserId(userId);
 
-        //管理员显示所有菜单信息
-        if (roleId.equals(RoleIdConstants.ADMIN_ROLE_ID)) {
+        //管理员或无角色用户显示所有菜单信息
+        if (roleId == null || roleId.equals(RoleIdConstants.ADMIN_ROLE_ID)) {
             return menuMapper.selectMenuListByUserId(menu);
         } else {
             menu.setUserId(userId);
@@ -196,14 +201,24 @@ public class MenuServiceImpl implements IMenuService {
     @Override
     @SuppressWarnings("unchecked")
     public List<RouterVo> selectMenuTreeRouterByUserId(Long userId) {
-        // 1. 尝试从Redis缓存获取
-        String cacheKey = Constants.MENU_CACHE_PREFIX + userId;
-        List<RouterVo> cached = (List<RouterVo>) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            return cached;
+        // 1. 读取全局版本号
+        Object versionObj = redisTemplate.opsForValue().get(Constants.MENU_CACHE_VERSION_KEY);
+        long currentVersion = versionObj != null ? Long.parseLong(versionObj.toString()) : 0L;
+
+        // 2. 尝试从Redis缓存获取（含版本校验）
+        String versionKey = Constants.MENU_CACHE_PREFIX + userId + ":version";
+        Object cachedVersionObj = redisTemplate.opsForValue().get(versionKey);
+        long cachedVersion = cachedVersionObj != null ? Long.parseLong(cachedVersionObj.toString()) : -1L;
+
+        if (cachedVersion == currentVersion && currentVersion > 0) {
+            String cacheKey = Constants.MENU_CACHE_PREFIX + userId;
+            List<RouterVo> cached = (List<RouterVo>) redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
         }
 
-        // 2. 缓存未命中，从数据库查询并构建
+        // 3. 缓存未命中或版本过期，从数据库查询并构建
         Menu menu = new Menu();
         List<Menu> menus;
 
@@ -217,7 +232,7 @@ public class MenuServiceImpl implements IMenuService {
             menus = menuMapper.selectMenuListByUserId(menu);
         }
 
-        // 3. 构建树形结构
+        // 4. 构建树形结构
         HashMap<Long, Menu> menuMap = new HashMap<>();
         for (Menu m : menus) {
             menuMap.put(m.getMenuId(), m);
@@ -236,24 +251,24 @@ public class MenuServiceImpl implements IMenuService {
             }
         }
 
-        // 4. 转换为路由格式
+        // 5. 转换为路由格式
         List<RouterVo> routers = buildMenus(rootMenus);
 
-        // 5. 写入Redis缓存
+        // 6. 写入Redis缓存（含版本号）
+        String cacheKey = Constants.MENU_CACHE_PREFIX + userId;
         redisTemplate.opsForValue().set(cacheKey, routers, Constants.MENU_CACHE_EXPIRE, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(versionKey, currentVersion, Constants.MENU_CACHE_EXPIRE, TimeUnit.SECONDS);
 
         return routers;
     }
 
     /**
-     * 清除所有菜单缓存（通过模糊匹配 MENU_CACHE_PREFIX*）
+     * 清除所有菜单缓存 — 通过递增全局版本号使所有已缓存数据过期
+     * 替代 KEYS * 操作，O(1) 且非阻塞
      */
     private void clearMenuCache() {
-        Set<String> keys = redisTemplate.keys(Constants.MENU_CACHE_PREFIX + "*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-            log.info("已清除所有菜单缓存");
-        }
+        Long newVersion = redisTemplate.opsForValue().increment(Constants.MENU_CACHE_VERSION_KEY);
+        log.info("菜单缓存版本已更新: version={}", newVersion);
     }
 
     /**

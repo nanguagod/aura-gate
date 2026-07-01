@@ -143,6 +143,7 @@ public class UserServiceImpl implements IUserService {
      * @return 是否删除成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteUserByUserIds(Long[] userIds) {
         //批量删除用户与角色关联
         userRoleMapper.deleteUserRoles(userIds);

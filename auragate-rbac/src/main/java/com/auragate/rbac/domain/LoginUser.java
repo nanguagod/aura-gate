@@ -3,9 +3,14 @@ package com.auragate.rbac.domain;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 登录用户身份类
@@ -27,6 +32,9 @@ public class LoginUser implements UserDetails {
     //用户信息: 关联的User实体信息
     private User user;
 
+    //用户权限标识集合（如 system:user:list）
+    private Set<String> permissions = new HashSet<>();
+
     //带参数的构造方法
     public LoginUser(Long userId, User user) {
         this.userId = userId;
@@ -35,11 +43,16 @@ public class LoginUser implements UserDetails {
 
     /**
      * 获取用户的权限集合
-     * @return null
+     * @return 权限列表（不为 null）
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        if (permissions == null || permissions.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return permissions.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     /**

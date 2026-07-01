@@ -14,13 +14,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public AjaxResult handleRuntimeException(RuntimeException e) {
-        log.info("运行时异常: ", e);
+        log.error("运行时异常: ", e);
         return AjaxResult.error(e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     public AjaxResult handleException(Exception e) {
-        log.info("系统异常: ", e);
+        log.error("系统异常: ", e);
         return AjaxResult.error(e.getMessage());
     }
 }

@@ -11,6 +11,7 @@
         <result property="path" column="path"/>
         <result property="component" column="component"/>
         <result property="menuType" column="menu_type"/>
+        <result property="perms" column="perms"/>
         <result property="icon" column="icon"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
@@ -18,7 +19,7 @@
     <!--根据用户ID查询菜单列表-->
     <select id="selectMenuListByUserId" resultMap="MenuResult" parameterType="Menu">
         select m.id, m.menu_name, m.parent_id, m.order_num, m.path, m.component,
-               m.menu_type, m.icon, m.create_time
+               m.menu_type, m.perms, m.icon, m.create_time
         from menu m
         left join role_menu rm on m.id = rm.menu_id
         left join user_role ur on rm.role_id = ur.role_id
@@ -36,7 +37,7 @@
     <!--根据菜单ID查询菜单信息-->
     <select id="selectMenuByMenuId" resultMap="MenuResult" parameterType="Long">
         select id, menu_name, parent_id, order_num, path, component,
-               menu_type, icon, create_time
+               menu_type, perms, icon, create_time
         from menu
         where id = #{menuId}
     </select>
