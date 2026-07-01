@@ -13,7 +13,9 @@ export const useUserStore = defineStore('user', () => {
     if (res.code === 200) {
       token.value = res.token
       localStorage.setItem('token', res.token)
-      await fetchUserInfo()
+      // NOTE: 不在此处调用 fetchUserInfo() 和 fetchMenus()
+      // 否则 userInfo 被设置后，router guard (permission.js) 会跳过 fetchMenus() 导致侧边栏为空
+      // router guard 会在导航时自动检测并调用 fetchUserInfo() + fetchMenus()
     }
     return res
   }

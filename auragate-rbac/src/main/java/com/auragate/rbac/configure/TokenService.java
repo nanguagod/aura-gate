@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -50,6 +51,10 @@ public class TokenService {
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+
+    // StringRedisTemplate: 使用纯 String 序列化，避免 Jackson Object 序列化导致 token 字符串反序列化失败
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 系统启动时初始化密钥
@@ -93,8 +98,9 @@ public class TokenService {
                 .compact();
 
         //7.将token存入Redis: auragate:token:{userId} -> token
+        // 使用 StringRedisTemplate 存储纯字符串，避免 Jackson 序列化导致反序列化失败
         String redisKey = Constants.TOKEN_PREFIX + loginUser.getUserId();
-        redisTemplate.opsForValue().set(redisKey, token, expireTime, TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(redisKey, token, expireTime, TimeUnit.MINUTES);
 
         return token;
     }
@@ -117,7 +123,7 @@ public class TokenService {
 
             //3.Redis黑名单校验 — 如果token在黑名单中则拒绝
             String blacklistKey = Constants.TOKEN_BLACKLIST_PREFIX + loginUser.getUserId();
-            String blacklistedToken = (String) redisTemplate.opsForValue().get(blacklistKey);
+            String blacklistedToken = stringRedisTemplate.opsForValue().get(blacklistKey);
             if (token.equals(blacklistedToken)) {
                 log.info("Token已在黑名单中, userId={}", loginUser.getUserId());
                 return null;
@@ -125,7 +131,7 @@ public class TokenService {
 
             //4.Redis token一致性校验 — 比对传入token是否与Redis存储的一致
             String redisKey = Constants.TOKEN_PREFIX + loginUser.getUserId();
-            String storedToken = (String) redisTemplate.opsForValue().get(redisKey);
+            String storedToken = stringRedisTemplate.opsForValue().get(redisKey);
             if (storedToken == null || !storedToken.equals(token)) {
                 log.info("Token与Redis不一致或已过期, userId={}", loginUser.getUserId());
                 return null;
@@ -151,13 +157,13 @@ public class TokenService {
             String userJson = claims.get("user_key", String.class);
             LoginUser loginUser = objectMapper.readValue(userJson, LoginUser.class);
 
-            // 删除Redis中的token
+            // 删除Redis中的token（使用 StringRedisTemplate）
             String redisKey = Constants.TOKEN_PREFIX + loginUser.getUserId();
-            redisTemplate.delete(redisKey);
+            stringRedisTemplate.delete(redisKey);
 
             // 将token加入黑名单（TTL与token过期时间一致）
             String blacklistKey = Constants.TOKEN_BLACKLIST_PREFIX + loginUser.getUserId();
-            redisTemplate.opsForValue().set(blacklistKey, token, expireTime, TimeUnit.MINUTES);
+            stringRedisTemplate.opsForValue().set(blacklistKey, token, expireTime, TimeUnit.MINUTES);
 
             log.info("用户退出登录, userId={}", loginUser.getUserId());
         } catch (Exception e) {
@@ -170,7 +176,7 @@ public class TokenService {
      */
     public void refreshToken(LoginUser loginUser) {
         String redisKey = Constants.TOKEN_PREFIX + loginUser.getUserId();
-        redisTemplate.expire(redisKey, expireTime, TimeUnit.MINUTES);
+        stringRedisTemplate.expire(redisKey, expireTime, TimeUnit.MINUTES);
     }
 
     /**

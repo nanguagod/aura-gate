@@ -225,7 +225,7 @@ public class MenuServiceImpl implements IMenuService {
         // 根据用户ID查询对应的角色ID
         Long roleId = userRoleMapper.selectRoleIdByUserId(userId);
 
-        if (roleId.equals(RoleIdConstants.ADMIN_ROLE_ID)) {
+        if (roleId == null || roleId.equals(RoleIdConstants.ADMIN_ROLE_ID)) {
             menus = menuMapper.selectMenuListByUserId(menu);
         } else {
             menu.setUserId(userId);

@@ -43,7 +43,7 @@ CREATE TABLE `menu` (
   `perms` varchar(100) DEFAULT NULL COMMENT '权限标识',
   `icon` varchar(100) DEFAULT NULL COMMENT '菜单图标',
   `order_num` int DEFAULT '0' COMMENT '显示顺序',
-  `menu_type` tinyint DEFAULT '0' COMMENT '菜单类型(0目录 1菜单 2按钮)',
+  `menu_type` varchar(1) DEFAULT 'M' COMMENT '菜单类型(M目录 C菜单 F按钮)',
   `status` tinyint DEFAULT '0' COMMENT '状态(0正常 1停用)',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`)
@@ -70,12 +70,21 @@ INSERT INTO `user` (`user_id`, `user_name`, `password`, `nickname`, `status`) VA
 (1, 'admin', '$2b$10$PsMT9haTL4obn7R/PEcEROptLeci87nwGLEfG9CikvkoXF2gnOegy', '管理员', 0);
 
 INSERT INTO `role` (`id`, `role_name`, `role_key`, `status`) VALUES
-(1, '管理员', 'admin', 0);
+(1, '管理员', 'admin', 0),
+(2, '普通用户', 'common', 0);
 
 INSERT INTO `user_role` (`user_id`, `role_id`) VALUES (1, 1);
 
 INSERT INTO `menu` (`id`, `menu_name`, `parent_id`, `path`, `component`, `perms`, `icon`, `order_num`, `menu_type`) VALUES
-(1, '系统管理', 0, '/system', NULL, NULL, 'Setting', 1, 0),
-(2, '用户管理', 1, '/system/user', 'system/user/index', 'system:user:list', 'User', 1, 1),
-(3, '角色管理', 1, '/system/role', 'system/role/index', 'system:role:list', 'Avatar', 2, 1),
-(4, '菜单管理', 1, '/system/menu', 'system/menu/index', 'system:menu:list', 'Menu', 3, 1);
+(1, '系统管理', 0, '/system', NULL, NULL, 'Setting', 1, 'M'),
+(2, '用户管理', 1, '/system/user', 'system/user/index', 'system:user:list', 'User', 1, 'C'),
+(3, '角色管理', 1, '/system/role', 'system/role/index', 'system:role:list', 'Avatar', 2, 'C'),
+(4, '菜单管理', 1, '/system/menu', 'system/menu/index', 'system:menu:list', 'Menu', 3, 'C');
+
+-- 角色-菜单关联: Admin (1) 拥有全部菜单
+INSERT INTO `role_menu` (`role_id`, `menu_id`) VALUES
+(1, 1), (1, 2), (1, 3), (1, 4);
+
+-- 角色-菜单关联: 普通用户 (2) 拥有全部菜单
+INSERT INTO `role_menu` (`role_id`, `menu_id`) VALUES
+(2, 1), (2, 2), (2, 3), (2, 4);
